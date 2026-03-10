@@ -200,7 +200,7 @@ bot.command("gpx", async (ctx) => {
 });
 
 bot.command("pressure", (ctx) => ctx.reply("Узнать идеальное давление в шинах можно здесь: https://axs.sram.com/guides/tire/pressure", { link_preview_options: { is_disabled: true } } as any));
-bot.command("resto", (ctx) => ctx.reply("Карта ресторанов: https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=", { link_preview_options: { is_disabled: true } } as any));
+bot.command("resto", (ctx) => ctx.reply("Лучшие места на [Яндекс Карте] (https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=)", { link_preview_options: { is_disabled: true } } as any));
 bot.command("komoot", (ctx) => ctx.reply("Наши коллекции маршрутов в Komoot: https://www.komoot.com/user/1622023059217/collections", { link_preview_options: { is_disabled: true } } as any));
 bot.command("rainfree", (ctx) => ctx.reply("Искать сухие дороги: https://rain-free.vercel.app", { link_preview_options: { is_disabled: true } } as any));
 
