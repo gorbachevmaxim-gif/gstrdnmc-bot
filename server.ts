@@ -223,16 +223,17 @@ bot.on("text", async (ctx) => {
     if (ctx.chat.type !== 'private' || ctx.message.text.startsWith("/")) return;
     const manualApiKey = await getSetting("gemini_api_key");
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
-    if (!apiKey) return ctx.reply("API ключ для ИИ не настроен.");
+    if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         const result = await model.generateContent(ctx.message.text);
         const text = result.response.text();
         await ctx.reply(text);
     } catch (e: any) { 
         console.error("[AI Error]:", e);
-        ctx.reply("Ошибка ИИ."); 
+        const errorMsg = e?.message || e?.toString() || "Unknown error";
+        ctx.reply(`Ошибка ИИ: ${errorMsg.substring(0, 200)}`); 
     }
 });
 
