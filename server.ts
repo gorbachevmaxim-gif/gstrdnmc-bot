@@ -163,13 +163,28 @@ const mainKeyboard = {
 bot.start((ctx) => ctx.reply("Спрашивай меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с давлением в шинах и найду сухие дороги.", { reply_markup: mainKeyboard }));
 
 bot.command("rides", async (ctx) => {
+    console.log(`[Rides Command] Received request from ${ctx.chat.id}`);
     try {
         const apiKey = process.env.BOT_API_KEY;
         const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
-        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const fetchUrl = `${baseUrl}/api/bot-data`;
+        console.log(`[Rides Command] Fetching from ${fetchUrl}`);
+        
+        const response = await fetch(fetchUrl, { 
+            headers: { 'x-api-key': apiKey || '' } 
+        });
+
+        if (!response.ok) {
+            console.error(`[Rides Command] API returned ${response.status}`);
+            throw new Error(`API error: ${response.status}`);
+        }
+        
         const data: any = await response.json();
-        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) return ctx.reply("Пока нет заездов. Попробуйте позже.");
+        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) {
+             console.log(`[Rides Command] No rides found in data`);
+             return ctx.reply("Пока нет заездов. Попробуйте позже.");
+        }
+
         let message = "<b>Ближайшие заезды Гастродинамики</b>\n\n";
         for (const [date, info] of Object.entries(data.groupedByDate) as [string, any][]) {
             const dateParts = (date as string).split('-');
@@ -181,7 +196,11 @@ bot.command("rides", async (ctx) => {
             }
         }
         await ctx.reply(message, { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any);
-    } catch (err) { ctx.reply("Не удалось загрузить данные о заездах."); }
+        console.log(`[Rides Command] Message sent successfully`);
+    } catch (err) { 
+        console.error("[Rides Command] Error:", err);
+        ctx.reply("Не удалось загрузить данные о заездах."); 
+    }
 });
 
 bot.command("manifest", (ctx) => ctx.reply(MANIFEST_TEXT));
@@ -200,6 +219,7 @@ bot.command("gpx", async (ctx) => {
 });
 
 bot.command("update_menu", async (ctx) => {
+    console.log(`[Update Menu] Received request from ${ctx.chat.id}`);
     try {
         const commands = [
             { command: 'manifest', description: 'манифест комьюнити' },
@@ -215,6 +235,7 @@ bot.command("update_menu", async (ctx) => {
         await ctx.telegram.setMyCommands(commands);
         await ctx.reply("✅ Меню обновлено! /rides добавлена.");
     } catch (err: any) {
+        console.error("[Update Menu] Error:", err);
         await ctx.reply(`❌ Ошибка: ${err.message}`);
     }
 });
@@ -240,11 +261,12 @@ app.use(express.json());
 
 // Main webhook handler
 app.post("/api/webhook", async (req, res) => {
+    console.log(`[Webhook] Received update:`, JSON.stringify(req.body));
     try {
         await bot.handleUpdate(req.body);
         if (!res.headersSent) res.status(200).send("ok");
     } catch (err) {
-        console.error("Webhook handle error:", err);
+        console.error("[Webhook] Handle error:", err);
         if (!res.headersSent) res.status(500).send("error");
     }
 });
