@@ -1,6 +1,4 @@
 import express from "express";
-import type { ViteDevServer } from "vite";
-import { createServer as createViteServer } from "vite";
 import { Telegraf } from "telegraf";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -12,9 +10,18 @@ dotenv.config();
 
 // Database setup for persistent settings with Redis
 const redisUrl = process.env.REDIS_URL || '';
-const redis = redisUrl ? new Redis(redisUrl) : null;
-if (redis) {
-    console.log(`[Database] Connected to Redis`);
+let redis: Redis | null = null;
+if (redisUrl) {
+    try {
+        redis = new Redis(redisUrl, {
+            lazyConnect: true, // IMPORTANT FOR SERVERLESS: Don't connect immediately
+            maxRetriesPerRequest: 1, // Don't hang trying to reconnect
+            retryStrategy: () => null // Stop retrying on failure
+        });
+        console.log(`[Database] Redis configured for lazy connection`);
+    } catch (e) {
+        console.error(`[Database] Redis initialization failed:`, e);
+    }
 } else {
     console.warn(`[Database] REDIS_URL not provided! Using in-memory storage (will be lost on restart).`);
 }
@@ -291,7 +298,7 @@ async function startServer() {
         { command: 'rainfree', description: 'ищет сухие дороги' },
     ];
 
-    // Автоматическая регистрация команд при старте
+    // Автоматическая регистрация команд при старте (не ждем, чтобы не блокировать serverless)
     const setupCommands = async () => {
         try {
             await bot.telegram.setMyCommands(commands); // Дефолт
@@ -303,7 +310,8 @@ async function startServer() {
             console.error("❌ Failed to sync commands:", err);
         }
     };
-    setupCommands();
+    // Выполняем асинхронно в фоне
+    setupCommands().catch(console.error);
     
     // Set bot description and short description
     const botDescription = "Гастродинамика: правила, туры, коллекции маршрутов, AI-помощник, карта лучших мест для старта/финиша, поиск сухих дорог.";
@@ -581,13 +589,14 @@ async function startServer() {
 
     // Настраиваем webhook для Vercel или fallback для локального запуска
     if (process.env.VERCEL_URL) {
-      const webhookUrl = `https://${process.env.VERCEL_URL}/api/webhook`;
+      const webhookUrl = `https://${process.env.VERCEL_URL}/`; // Vercel routes everything to server.ts
+      // Do not block startServer on setWebhook
       bot.telegram.setWebhook(webhookUrl)
         .then(() => console.log(`[Webhook] Set to ${webhookUrl}`))
         .catch(err => console.error("[Webhook] Error setting webhook:", err));
 
-      // Обработчик для webhook
-      app.use(bot.webhookCallback('/api/webhook'));
+      // Обработчик для webhook (на корневой URL, т.к. vercel.json перенаправляет все)
+      app.use(bot.webhookCallback('/'));
     } else {
       bot.launch()
         .then(() => console.log("Telegram bot started (polling)."))
@@ -693,16 +702,17 @@ async function startServer() {
     });
   }
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  // Vite middleware for development (only dynamic import to avoid breaking Vercel)
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     try {
-      const vite = await createViteServer({
+      const vite = await import("vite");
+      const viteServer = await vite.createServer({
         server: { middlewareMode: true },
         appType: "spa",
       });
-      app.use(vite.middlewares);
+      app.use(viteServer.middlewares);
     } catch (e) {
-      console.warn("Vite is not available in production or serverless environment.");
+      console.warn("Vite is not available.");
     }
   } else {
     app.use(express.static("dist"));
