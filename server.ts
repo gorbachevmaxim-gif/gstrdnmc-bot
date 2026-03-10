@@ -210,7 +210,7 @@ bot.command("update_menu", async (ctx) => {
             { command: 'manifest', description: 'манифест комьюнити' },
             { command: 'rules', description: 'правила для райдов' },
             { command: 'calendar', description: 'календарь на сезон' },
-            { command: 'rides', description: 'ближайшие заезды' },
+            { command: 'rides', description: 'подборка маршрутов на выходные' },
             { command: 'gpx', description: 'обход ограничений Komoot' },
             { command: 'pressure', description: 'давление в шинах' },
             { command: 'resto', description: 'карта ресторанов' },
