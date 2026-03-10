@@ -226,7 +226,7 @@ bot.on("text", async (ctx) => {
     if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
     try {
         // Use direct fetch with proper headers - v1 API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
