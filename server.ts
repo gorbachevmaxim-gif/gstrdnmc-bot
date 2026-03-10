@@ -225,19 +225,28 @@ bot.on("text", async (ctx) => {
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
     if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
     try {
-        // Let's use standard API model name exactly as per Google AI Studio docs
-        // Also removing manual apiVersion specification as the SDK handles it
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { 
-            customHeaders: {
+        // Use gemini-1.5-flash but specify the model directly in fetch, completely bypassing SDK constraints
+        // We know v1beta API is required but we need to format the model name correctly.
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
                 "Origin": "https://gstrdnmc-bot.vercel.app",
                 "Referer": "https://gstrdnmc-bot.vercel.app/"
-            }
+            },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: ctx.message.text }] }]
+            })
         });
         
-        const result = await model.generateContent(ctx.message.text);
-        const text = result.response.text();
-        await ctx.reply(text);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API error ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Нет ответа от ИИ";
+        await ctx.reply(aiText);
     } catch (e: any) { 
         console.error("[AI Error]:", e);
         const errorMsg = e?.message || e?.toString() || "Unknown error";
