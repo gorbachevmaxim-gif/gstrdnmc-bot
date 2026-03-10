@@ -193,16 +193,16 @@ bot.command("calendar", async (ctx) => {
 });
 bot.command("gpx", async (ctx) => {
     const url = ctx.payload;
-    if (!url) return ctx.reply("Вставьте ссылку на Komoot после /gpx");
+    if (!url) return ctx.reply("Обход ограничений Komoot на скачивание GPX. Вставь ссылку на маршрут Komoot после /gpx, например: /gpx https://www.komoot.com/tour/... Сгенерированный файл будет готов к экспорту в Telegram или сторонние навигаторы.\n\nМаршруты Гастродинамики можно посмотреть в коллекциях Komoot, нажав на кнопку KOMOOT в меню.");
     const result = await convertKomootToGpx(url);
     if (result) await ctx.replyWithDocument({ source: Buffer.from(result.content), filename: result.filename });
     else ctx.reply("Не удалось конвертировать.");
 });
 
-bot.command("pressure", (ctx) => ctx.reply("Узнать <a href=\"https://axs.sram.com/guides/tire/pressure\">идеальное давление</a> в шинах", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
-bot.command("resto", (ctx) => ctx.reply("Лучшие места на <a href=\"https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=8\">Яндекс Карте</a>", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
-bot.command("komoot", (ctx) => ctx.reply("Наши <a href=\"https://www.komoot.com/user/1622023059217/collections\">коллекции маршрутов</a> в Komoot", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
-bot.command("rainfree", (ctx) => ctx.reply("Ищем <a href=\"https://rain-free.vercel.app\">сухие дороги</a> для тебя", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
+bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">калькулятор</a> точного давления для ваших колес.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
+bot.command("resto", (ctx) => ctx.reply("места на <a href=\"https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=\">Яндекс Карты</a> с ресторанами и кафе для старта и финиша райда во множестве городов, где мы были или будем.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
+bot.command("komoot", (ctx) => ctx.reply("<a href=\"https://www.komoot.com/user/1622023059217/collections\">коллекции</a> маршрутов Гастродинамики.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
+bot.command("rainfree", (ctx) => ctx.reply("Ищет <a href=\"https://rain-free.vercel.app\">сухие дороги</a> для тебя", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
 
 bot.command("update_menu", async (ctx) => {
     try {
