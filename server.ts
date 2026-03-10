@@ -1,5 +1,5 @@
 import express from "express";
-import { Telegraf } from "telegraf";
+import { Bot, webhookCallback, InputFile } from "grammy";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import Redis from "ioredis";
@@ -149,7 +149,7 @@ async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string
 }
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new Telegraf(botToken || "");
+const bot = new Bot(botToken || "000000000:mock_token");
 
 const mainKeyboard = {
     keyboard: [
@@ -160,7 +160,7 @@ const mainKeyboard = {
     is_persistent: true
 };
 
-bot.start((ctx) => ctx.reply("Спроси меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с корректным давлением в шинах и найду сухие дороги для тебя.", { reply_markup: mainKeyboard }));
+bot.command("start", (ctx) => ctx.reply("Спроси меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с корректным давлением в шинах и найду сухие дороги для тебя.", { reply_markup: mainKeyboard }));
 
 bot.command("rides", async (ctx) => {
     try {
@@ -180,7 +180,7 @@ bot.command("rides", async (ctx) => {
                 message += `• ${ride.routeName}\n  ${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n  Погода: ${ride.weatherParams.temperature}º, ветер ${ride.weatherParams.wind}\n  <a href="${ride.gpxUrl}">Скачать GPX</a>\n\n`;
             }
         }
-        await ctx.reply(message, { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any);
+        await ctx.reply(message, { parse_mode: "HTML", link_preview_options: { is_disabled: true } });
     } catch (err) { ctx.reply("Не удалось загрузить данные о заездах."); }
 });
 
@@ -189,20 +189,20 @@ bot.command("rules", (ctx) => ctx.reply(RULES_TEXT));
 bot.command("calendar", async (ctx) => {
     const text = TOURS.map(t => `<b>${t.name}</b>\n${t.displayDate}\n${t.details}`).join("\n\n");
     await ctx.reply(`Календарь 2026\n\n${text}`, { parse_mode: "HTML" });
-    await ctx.replyWithDocument({ source: Buffer.from(generateFullIcs()), filename: "calendar.ics" });
+    await ctx.replyWithDocument(new InputFile(Buffer.from(generateFullIcs()), "calendar.ics"));
 });
 bot.command("gpx", async (ctx) => {
-    const url = ctx.payload;
+    const url = ctx.match;
     if (!url) return ctx.reply("Обход ограничений Komoot на скачивание GPX. Вставь ссылку на маршрут Komoot после /gpx, например: /gpx https://www.komoot.com/tour/... Сгенерированный файл будет готов к экспорту в Telegram или сторонние навигаторы.\n\nМаршруты Гастродинамики можно посмотреть в коллекциях Komoot, нажав на кнопку KOMOOT в меню.");
     const result = await convertKomootToGpx(url);
-    if (result) await ctx.replyWithDocument({ source: Buffer.from(result.content), filename: result.filename });
+    if (result) await ctx.replyWithDocument(new InputFile(Buffer.from(result.content), result.filename));
     else ctx.reply("Не удалось конвертировать.");
 });
 
-bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">калькулятор</a> точного давления для ваших колес.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
-bot.command("resto", (ctx) => ctx.reply("места на <a href=\"https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=\">Яндекс Карты</a> с ресторанами и кафе для старта и финиша райда во множестве городов, где мы были или будем.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
-bot.command("komoot", (ctx) => ctx.reply("<a href=\"https://www.komoot.com/user/1622023059217/collections\">коллекции</a> маршрутов Гастродинамики.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
-bot.command("rainfree", (ctx) => ctx.reply("Ищет <a href=\"https://rain-free.vercel.app\">сухие дороги</a> для тебя", { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any));
+bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">калькулятор</a> точного давления для ваших колес.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("resto", (ctx) => ctx.reply("места на <a href=\"https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=\">Яндекс Карты</a> с ресторанами и кафе для старта и финиша райда во множестве городов, где мы были или будем.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("komoot", (ctx) => ctx.reply("<a href=\"https://www.komoot.com/user/1622023059217/collections\">коллекции</a> маршрутов Гастродинамики.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("rainfree", (ctx) => ctx.reply("Ищет <a href=\"https://rain-free.vercel.app\">сухие дороги</a> для тебя", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
 
 bot.command("update_menu", async (ctx) => {
     try {
@@ -217,16 +217,16 @@ bot.command("update_menu", async (ctx) => {
             { command: 'komoot', description: 'коллекции маршрутов' },
             { command: 'rainfree', description: 'ищет сухие дороги' },
         ];
-        await ctx.telegram.setMyCommands(commands);
-        try { await ctx.telegram.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
-        try { await ctx.telegram.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
+        await ctx.api.setMyCommands(commands);
+        try { await ctx.api.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
+        try { await ctx.api.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
         await ctx.reply("✅ Меню обновлено!");
     } catch (err: any) {
         await ctx.reply(`❌ Ошибка: ${err.message}`);
     }
 });
 
-bot.on("text", async (ctx) => {
+bot.on("message:text", async (ctx) => {
     if (ctx.chat.type !== 'private' || ctx.message.text.startsWith("/")) return;
     const manualApiKey = await getSetting("gemini_api_key");
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
@@ -264,21 +264,7 @@ const app = express();
 app.use(express.json());
 
 // Main webhook handler
-app.post("/api/webhook", async (req, res) => {
-    try {
-        // Telegraf needs getMe info to handle updates. 
-        // In Serverless, we fetch it ONCE per instance life.
-        if (!bot.botInfo) {
-            bot.botInfo = await bot.telegram.getMe();
-        }
-        
-        await bot.handleUpdate(req.body);
-        if (!res.headersSent) res.status(200).send("ok");
-    } catch (err: any) {
-        console.error("[Webhook] error:", err);
-        if (!res.headersSent) res.status(500).send("error");
-    }
-});
+app.use("/api/webhook", webhookCallback(bot, "express"));
 
 // Health and Config API
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
@@ -295,9 +281,9 @@ app.get("/api/update_commands", async (req, res) => {
             { command: 'komoot', description: 'коллекции маршрутов' },
             { command: 'rainfree', description: 'ищет сухие дороги' },
         ];
-        await bot.telegram.setMyCommands(commands);
-        try { await bot.telegram.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
-        try { await bot.telegram.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
+        await bot.api.setMyCommands(commands);
+        try { await bot.api.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
+        try { await bot.api.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
         res.send("✅ Commands successfully updated via API!");
     } catch (err: any) {
         res.status(500).send(`❌ Error: ${err.message}`);

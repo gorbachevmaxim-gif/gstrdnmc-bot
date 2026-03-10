@@ -1,4 +1,4 @@
-import { Telegraf } from 'telegraf';
+import { Bot } from 'grammy';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -7,8 +7,8 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 console.log("Token exists:", !!token);
 
 if (token) {
-  const bot = new Telegraf(token);
-  bot.telegram.getMe().then(me => {
+  const bot = new Bot(token);
+  bot.api.getMe().then(me => {
     console.log("Bot info:", me.username);
     process.exit(0);
   }).catch(err => {

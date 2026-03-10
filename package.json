@@ -18,12 +18,12 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "grammy": "^1.41.1",
     "ioredis": "^5.10.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "telegraf": "^4.16.3",
     "vite": "^6.2.0"
   },
   "devDependencies": {
