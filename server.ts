@@ -282,6 +282,27 @@ app.post("/api/webhook", async (req, res) => {
 
 // Health and Config API
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+app.get("/api/update_commands", async (req, res) => {
+    try {
+        const commands = [
+            { command: 'manifest', description: 'манифест комьюнити' },
+            { command: 'rules', description: 'правила для райдов' },
+            { command: 'calendar', description: 'календарь на сезон' },
+            { command: 'rides', description: 'подборка маршрутов на выходные' },
+            { command: 'gpx', description: 'обход ограничений Komoot' },
+            { command: 'pressure', description: 'давление в шинах' },
+            { command: 'resto', description: 'карта ресторанов' },
+            { command: 'komoot', description: 'коллекции маршрутов' },
+            { command: 'rainfree', description: 'ищет сухие дороги' },
+        ];
+        await bot.telegram.setMyCommands(commands);
+        try { await bot.telegram.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
+        try { await bot.telegram.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
+        res.send("✅ Commands successfully updated via API!");
+    } catch (err: any) {
+        res.status(500).send(`❌ Error: ${err.message}`);
+    }
+});
 app.get("/api/config", async (req, res) => {
     const key = await getSetting("gemini_api_key");
     res.json({ hasKey: !!key || !!process.env.GEMINI_API_KEY, botTokenStatus: botToken ? "PRESENT" : "MISSING" });
