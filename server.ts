@@ -4,411 +4,37 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import Redis from "ioredis";
 
-import path from "path";
-
 dotenv.config();
 
-// Database setup for persistent settings with Redis
+// Database setup
 const redisUrl = process.env.REDIS_URL || '';
 let redis: Redis | null = null;
 if (redisUrl) {
     try {
         redis = new Redis(redisUrl, {
-            lazyConnect: true, // IMPORTANT FOR SERVERLESS: Don't connect immediately
-            maxRetriesPerRequest: 1, // Don't hang trying to reconnect
-            retryStrategy: () => null // Stop retrying on failure
+            lazyConnect: true,
+            maxRetriesPerRequest: 1,
+            retryStrategy: () => null
         });
-        console.log(`[Database] Redis configured for lazy connection`);
     } catch (e) {
         console.error(`[Database] Redis initialization failed:`, e);
     }
-} else {
-    console.warn(`[Database] REDIS_URL not provided! Using in-memory storage (will be lost on restart).`);
 }
 
 const memorySettings = new Map<string, string>();
 
 const TOURS = [
-    {
-        id: "uzbekistan",
-        name: "Самарканд и Ташкент",
-        start: "20260409",
-        end: "20260413", // ICS end date is exclusive for all-day events
-        location: "Узбекистан",
-        description: "Велотур Самарканд и Ташкент. 4 дня, 2 райда.",
-        displayDate: "с 9 по 12 апреля 2026",
-        details: "4 дня, 2 райда"
-    },
-    {
-        id: "minsk",
-        name: "Минск",
-        start: "20260507",
-        end: "20260511",
-        location: "Беларусь, Минск",
-        description: "Велотур в Минск. 3 дня, 2 райда.",
-        displayDate: "с 7 по 10 мая 2026",
-        details: "3 дня, 2 райда"
-    },
-    {
-        id: "krasnoyarsk",
-        name: "Красноярск",
-        start: "20260610",
-        end: "20260615",
-        location: "Россия, Красноярск",
-        description: "Велотур в Красноярск. 7 дней, 4 райда.",
-        displayDate: "с 10 по 14 июня 2026",
-        details: "7 дней, 4 райда"
-    },
-    {
-        id: "chuvashia",
-        name: "Чувашия",
-        start: "20260708",
-        end: "20260713",
-        location: "Россия, Чувашия",
-        description: "Велотур в Чувашию. 5 дней, 2 райда.",
-        displayDate: "с 8 по 12 июля 2026",
-        details: "5 дней, 2 райда"
-    },
-    {
-        id: "vladivostok",
-        name: "Владивосток",
-        start: "20260725",
-        end: "20260802",
-        location: "Россия, Владивосток",
-        description: "Велотур во Владивосток. 7 дней, 4 райда.",
-        displayDate: "с 25 июля по 1 августа 2026",
-        details: "7 дней, 4 райда"
-    },
-    {
-        id: "pskov",
-        name: "Пушгоры и Псков",
-        start: "20260813",
-        end: "20260817",
-        location: "Россия, Псков",
-        description: "Велотур в Пушгоры и Псков. 3 дня, 2 райда.",
-        displayDate: "с 13 по 16 августа 2026",
-        details: "3 дня, 2 райда"
-    },
-    {
-        id: "kamyshin",
-        name: "Камышин",
-        start: "20260819",
-        end: "20260824",
-        location: "Россия, Камышин",
-        description: "Велотур в Камышин. 5 дней, 4 райда.",
-        displayDate: "с 19 по 23 августа 2026",
-        details: "5 дней, 4 райда"
-    },
-    {
-        id: "turkey",
-        name: "Турция",
-        start: "20261030",
-        end: "20261109",
-        location: "Турция",
-        description: "Велотур в Турцию. 10 дней, 7 райдов.",
-        displayDate: "с 30 октября по 8 ноября 2026",
-        details: "10 дней, 7 райдов"
-    }
+    { id: "uzbekistan", name: "Самарканд и Ташкент", start: "20260409", end: "20260413", location: "Узбекистан", description: "Велотур Самарканд и Ташкент. 4 дня, 2 райда.", displayDate: "с 9 по 12 апреля 2026", details: "4 дня, 2 райда" },
+    { id: "minsk", name: "Минск", start: "20260507", end: "20260511", location: "Беларусь, Минск", description: "Велотур в Минск. 3 дня, 2 райда.", displayDate: "с 7 по 10 мая 2026", details: "3 дня, 2 райда" },
+    { id: "krasnoyarsk", name: "Красноярск", start: "20260610", end: "20260615", location: "Россия, Красноярск", description: "Велотур в Красноярск. 7 дней, 4 райда.", displayDate: "с 10 по 14 июня 2026", details: "7 дней, 4 райда" },
+    { id: "chuvashia", name: "Чувашия", start: "20260708", end: "20260713", location: "Россия, Чувашия", description: "Велотур в Чувашию. 5 дней, 2 райда.", displayDate: "с 8 по 12 июля 2026", details: "5 дней, 2 райда" },
+    { id: "vladivostok", name: "Владивосток", start: "20260725", end: "20260802", location: "Россия, Владивосток", description: "Велотур во Владивосток. 7 дней, 4 райда.", displayDate: "с 25 июля по 1 августа 2026", details: "7 дней, 4 райда" },
+    { id: "pskov", name: "Пушгоры и Псков", start: "20260813", end: "20260817", location: "Россия, Псков", description: "Велотур в Пушгоры и Псков. 3 дня, 2 райда.", displayDate: "с 13 по 16 августа 2026", details: "3 дня, 2 райда" },
+    { id: "kamyshin", name: "Камышин", start: "20260819", end: "20260824", location: "Россия, Камышин", description: "Велотур в Камышин. 5 дней, 4 райда.", displayDate: "с 19 по 23 августа 2026", details: "5 дней, 4 райда" },
+    { id: "turkey", name: "Турция", start: "20261030", end: "20261109", location: "Турция", description: "Велотур в Турцию. 10 дней, 7 райдов.", displayDate: "с 30 октября по 8 ноября 2026", details: "10 дней, 7 райдов" }
 ];
 
-function generateIcs(tour: typeof TOURS[0]): string {
-    return [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Gastrodynamica//Tour Calendar//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "BEGIN:VEVENT",
-        `UID:${tour.id}@gastrodynamica.com`,
-        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
-        `DTSTART;VALUE=DATE:${tour.start}`,
-        `DTEND;VALUE=DATE:${tour.end}`,
-        `SUMMARY:${tour.name}`,
-        `LOCATION:${tour.location}`,
-        `DESCRIPTION:${tour.description}`,
-        "STATUS:CONFIRMED",
-        "SEQUENCE:0",
-        "BEGIN:VALARM",
-        "TRIGGER:-P1D",
-        "DESCRIPTION:Reminder",
-        "ACTION:DISPLAY",
-        "END:VALARM",
-        "END:VEVENT",
-        "END:VCALENDAR"
-    ].join("\r\n");
-}
-
-function generateFullIcs(): string {
-    const events = TOURS.map(tour => {
-        return [
-            "BEGIN:VEVENT",
-            `UID:${tour.id}@gastrodynamica.com`,
-            `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
-            `DTSTART;VALUE=DATE:${tour.start}`,
-            `DTEND;VALUE=DATE:${tour.end}`,
-            `SUMMARY:${tour.name}`,
-            `LOCATION:${tour.location}`,
-            `DESCRIPTION:${tour.description}`,
-            "STATUS:CONFIRMED",
-            "SEQUENCE:0",
-            "BEGIN:VALARM",
-            "TRIGGER:-P1D",
-            "DESCRIPTION:Reminder",
-            "ACTION:DISPLAY",
-            "END:VALARM",
-            "END:VEVENT"
-        ].join("\r\n");
-    }).join("\r\n");
-
-    return [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Gastrodynamica//Tour Calendar//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        events,
-        "END:VCALENDAR"
-    ].join("\r\n");
-}
-
-async function getSetting(key: string): Promise<string | null> {
-    if (redis) {
-        try {
-            return await redis.get(key);
-        } catch (e) {
-            console.error(`[Redis] Error getting key ${key}:`, e);
-            return null;
-        }
-    }
-    return memorySettings.get(key) || null;
-}
-
-async function saveSetting(key: string, value: string): Promise<void> {
-    if (redis) {
-        try {
-            await redis.set(key, value);
-        } catch (e) {
-            console.error(`[Redis] Error setting key ${key}:`, e);
-        }
-    } else {
-        memorySettings.set(key, value);
-    }
-}
-
-// Komoot to GPX conversion logic
-async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string, content: string } | null> {
-    try {
-        let html = '';
-        try {
-            const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(komootUrl)}`, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-                }
-            });
-            if (!response.ok) throw new Error('Proxy 1 failed');
-            html = await response.text();
-        } catch (e) {
-            const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(komootUrl)}`, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-                }
-            });
-            if (!response.ok) throw new Error('Network response was not ok');
-            html = await response.text();
-        }
-        
-        const startMarker = 'kmtBoot.setProps("';
-        const endMarker = '");';
-        
-        const startIndex = html.indexOf(startMarker);
-        if (startIndex === -1) throw new Error('Could not find route data in page');
-        
-        const jsonStart = startIndex + startMarker.length;
-        const endIndex = html.indexOf(endMarker, jsonStart);
-        if (endIndex === -1) throw new Error('Could not find end of route data');
-
-        const jsonStringEscaped = html.substring(jsonStart, endIndex);
-        const jsonString = JSON.parse(`"${jsonStringEscaped}"`);
-        const data = JSON.parse(jsonString);
-
-        const tourName = data?.page?._embedded?.tour?.name || 'route';
-        const coordinates = data?.page?._embedded?.tour?._embedded?.coordinates?.items;
-
-        if (!coordinates || !Array.isArray(coordinates)) {
-            throw new Error('No coordinates found in route data');
-        }
-
-        const header = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="komootgpx-bot" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
-  <metadata>
-    <name>${tourName}</name>
-  </metadata>
-  <trk>
-    <name>${tourName}</name>
-    <trkseg>
-`;
-        const footer = `    </trkseg>
-  </trk>
-</gpx>`;
-
-        const points = coordinates.map((coord: any) => {
-            return `      <trkpt lat="${coord.lat}" lon="${coord.lng}">
-        <ele>${coord.alt}</ele>
-      </trkpt>`;
-        }).join('\n');
-
-        const gpxContent = header + points + '\n' + footer;
-        return { filename: `${tourName.replace(/[^a-z0-9]/gi, '_')}.gpx`, content: gpxContent };
-    } catch (error) {
-        console.error("Conversion error:", error);
-        return null;
-    }
-}
-
-async function startServer() {
-  let manualApiKey: string | null = await getSetting("gemini_api_key");
-  console.log(`[Startup] Loaded manual API key from DB: ${manualApiKey ? `Yes (length: ${manualApiKey.length})` : 'No'}`);
-  const app = express();
-  const PORT = 3000;
-
-  // Telegram Bot Setup
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  if (!botToken) {
-    console.error("TELEGRAM_BOT_TOKEN is not set in environment variables.");
-  } else {
-    const bot = new Telegraf(botToken);
-
-    // Логирование всех входящих сообщений для отладки
-    bot.use(async (ctx, next) => {
-        if (ctx.message && "text" in ctx.message) {
-            console.log(`[Bot Log] Message from ${ctx.chat.id} (${ctx.chat.type}): ${ctx.message.text}`);
-        }
-        return next();
-    });
-    
-    // Глобальный список команд для регистрации
-    const commands = [
-        { command: 'manifest', description: 'манифест комьюнити' },
-        { command: 'rules', description: 'правила для райдов' },
-        { command: 'calendar', description: 'календарь на сезон' },
-        { command: 'gpx', description: 'обход ограничений Komoot' },
-        { command: 'pressure', description: 'давление в шинах' },
-        { command: 'resto', description: 'карта ресторанов' },
-        { command: 'komoot', description: 'коллекции маршрутов' },
-        { command: 'rainfree', description: 'ищет сухие дороги' },
-    ];
-
-    // Автоматическая регистрация команд при старте (не ждем, чтобы не блокировать serverless)
-    const setupCommands = async () => {
-        try {
-            await bot.telegram.setMyCommands(commands); // Дефолт
-            await bot.telegram.setMyCommands(commands, { scope: { type: 'all_private_chats' } });
-            await bot.telegram.setMyCommands(commands, { scope: { type: 'all_group_chats' } });
-            await bot.telegram.setMyCommands(commands, { scope: { type: 'all_chat_administrators' } });
-            console.log("✅ Bot commands synchronized successfully");
-        } catch (err) {
-            console.error("❌ Failed to sync commands:", err);
-        }
-    };
-    // Выполняем асинхронно в фоне
-    setupCommands().catch(console.error);
-    
-    // Set bot description and short description
-    const botDescription = "Гастродинамика: правила, туры, коллекции маршрутов, AI-помощник, карта лучших мест для старта/финиша, поиск сухих дорог.";
-    bot.telegram.setMyDescription(botDescription).catch(err => console.error("Failed to set bot description:", err));
-    bot.telegram.setMyShortDescription("Гастродинамика: правила, туры, коллекции маршрутов, AI-помощник, карта лучших мест для старта/финиша, поиск сухих дорог.").catch(err => console.error("Failed to set bot short description:", err));
-    
-    const webAppUrl = process.env.SHARED_APP_URL || process.env.APP_URL || "https://ais-dev-l6kj63ksshyi2scgqp76t4-402783856947.us-east1.run.app";
-
-    const mainKeyboard = {
-        keyboard: [
-            [
-                { text: "RAINFREE", web_app: { url: "https://rain-free.vercel.app" } },
-                { text: "TIRE PRESSURE", web_app: { url: "https://axs.sram.com/guides/tire/pressure" } }
-            ],
-            [
-                { text: "RESTO", web_app: { url: "https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=" } },
-                { text: "KOMOOT", web_app: { url: "https://www.komoot.com/user/1622023059217/collections" } }
-            ]
-        ],
-        resize_keyboard: true,
-        is_persistent: true
-    };
-
-    bot.start(async (ctx) => {
-        ctx.reply("Спрашивай меня о правилах и манифесте, уточняй даты в календаре туров или проси выкачать GPX из Komoot для закрытых регионов. Также помогу подобрать идеальное давление в шинах и найду красивые сухие дороги с вкусными ресторанами на старте и финише. Просто напиши мне – поддержу беседу как старый друг.", {
-            reply_markup: mainKeyboard
-        });
-    });
-
-    bot.command("ping", (ctx) => ctx.reply("Понг! Я на связи."));
-
-    bot.command("pressure", (ctx) => {
-        ctx.reply("/pressure — [калькулятор](https://axs.sram.com/guides/tire/pressure) точного давления для ваших колес.", {
-            parse_mode: "Markdown"
-        });
-    });
-
-    bot.command("resto", (ctx) => {
-        ctx.reply("/resto — места на [Яндекс Карты](https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=) с ресторанами и кафе для старта и финиша райда во множестве городов, где мы были или будем.", {
-            parse_mode: "Markdown"
-        });
-    });
-
-    bot.command("komoot", (ctx) => {
-        ctx.reply("/komoot — [коллекции](https://www.komoot.com/user/1622023059217/collections) маршрутов Гастродинамики.", {
-            parse_mode: "Markdown"
-        });
-    });
-
-    bot.command("rainfree", (ctx) => {
-        ctx.reply("/rainfree — ищет [сухие дороги](https://rain-free.vercel.app/) для тебя", {
-            parse_mode: "Markdown"
-        });
-    });
-
-    bot.command("menu", async (ctx) => {
-        console.log(`[Menu Debug] Command received from chat ${ctx.chat.id} (${ctx.chat.type})`);
-        try {
-            // В группах всегда используем ответ на сообщение (reply)
-            const isGroup = ctx.chat.type === 'group' || ctx.chat.type === 'supergroup';
-            
-            await ctx.reply("Пробую развернуть меню Гастродинамики под полем ввода...", {
-                reply_parameters: { message_id: ctx.message.message_id }
-            });
-
-            // Настраиваем клавиатуру специально для групп
-            const keyboardMarkup = {
-                ...mainKeyboard,
-                selective: isGroup // В группах показываем только тому, кто вызвал
-            };
-
-            await ctx.reply("Нажмите на иконку с четырьмя точками в поле ввода. Если она не появилась — значит Telegram ограничивает меню для групп. В этом случае используйте ссылки ниже.", {
-                reply_markup: keyboardMarkup
-            });
-        } catch (err) {
-            console.error("Menu command error:", err);
-            // План Б: Inline-кнопки (ссылки) - они работают всегда
-            await ctx.reply("Используйте быстрые ссылки для доступа к сервисам:", {
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: "RAINFREE", url: "https://rain-free.vercel.app" },
-                            { text: "TIRE PRESSURE", url: "https://axs.sram.com/guides/tire/pressure" }
-                        ],
-                        [
-                            { text: "RESTO", url: "https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=" },
-                            { text: "KOMOOT", url: "https://www.komoot.com/user/1622023059217/collections" }
-                        ]
-                    ]
-                }
-            });
-        }
-    });
-
-    bot.help((ctx) => ctx.reply("Доступные команды:\n/manifest - манифест комьюнити\n/rules - правила для райдов\n/calendar - календарь на сезон\n/gpx - скачивание закрытых в Komoot gpx-файлов\n/pressure - давление в шинах\n/resto - карта ресторанов\n/komoot - коллекции Komoot\n/rainfree — ищет сухие дороги для тебя\n/menu — показать кнопки управления"));
-    
-    bot.command("manifest", (ctx) => ctx.reply(`Многие спрашивают, как можно присоединиться к Гастродинамике. Здесь мы описали что нужно делать, чтобы быть внутри комьюнити.
+const MANIFEST_TEXT = `Многие спрашивают, как можно присоединиться к Гастродинамике. Здесь мы описали что нужно делать, чтобы быть внутри комьюнити.
 
 1. Быть вовлеченным в нашу общую жизнь, помогать с организацией туров, не стесняться, проявлять инициативу. У каждого из нас есть свои сильные стороны, профессиональные навыки, связи в обществе и многое другое, что можно отдать ребятам в комьюнити. Подумайте что можете сделать именно вы.
 
@@ -424,8 +50,9 @@ async function startServer() {
 
 7. Управлять ожиданиями в комьюнити, чтобы ни у кого не было недопониманий. Сразу спрашивать, если что-то непонятно, и не молчать, когда видите, что чего-то не хватает. Делать шаг вперед, если есть идея с чем можете всем помочь, но не знаете с чего начать. Говорить заранее, если с чем-то не согласны, а критикуя что-то — всегда предлагать свой вариант. И главное, беря ответственность за что-либо — быть прозрачным, доводить дело до конца или вовремя делегировать на другого участника.
 
-8. Если по каким-то причинам решили не быть частью комьюнити, то это нормально — сообщите всем об этом, поблагодарим друг друга за опыт, обнимемся и будем спокойно жить дальше.`));
-    bot.command("rules", (ctx) => ctx.reply(`Мы едем не просто кататься, мы едем вместе. Чтобы райд прошел безопасно и в кайф, мы договариваемся о правилах «на берегу».
+8. Если по каким-то причинам решили не быть частью комьюнити, то это нормально — сообщите всем об этом, поблагодарим друг друга за опыт, обнимемся и будем спокойно жить дальше.`;
+
+const RULES_TEXT = `Мы едем не просто кататься, мы едем вместе. Чтобы райд прошел безопасно и в кайф, мы договариваемся о правилах «на берегу».
 
 1. Я – не пассажир, я – пилот.
 Организаторы обеспечивают логистику, маршрут и сопровождение. Но они не няньки.
@@ -455,286 +82,184 @@ async function startServer() {
 5. Отношение к организаторам.
 Организаторы – это гиды вашего приключения, а не обслуживающий персонал.
 Мы общаемся на равных и с уважением.
-Любая помощь организаторам приветствуется и повышает карму (резерв ресторанов, организация трансфера и машины сопровождения).`));
-    bot.command("calendar", async (ctx) => {
-        const calendarText = TOURS.map(tour => {
-            return `<b>${tour.name}</b>\n${tour.displayDate}\n${tour.details}`;
-        }).join("\n\n");
+Любая помощь организаторам приветствуется и повышает карму (резерв ресторанов, организация трансфера и машины сопровождения).`;
 
-        await ctx.reply(`Календарь туров Гастродинамики\n\n${calendarText}`, {
-            parse_mode: "HTML"
-        });
+function generateFullIcs(): string {
+    const events = TOURS.map(tour => [
+        "BEGIN:VEVENT",
+        `UID:${tour.id}@gastrodynamica.com`,
+        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
+        `DTSTART;VALUE=DATE:${tour.start}`,
+        `DTEND;VALUE=DATE:${tour.end}`,
+        `SUMMARY:${tour.name}`,
+        `LOCATION:${tour.location}`,
+        `DESCRIPTION:${tour.description}`,
+        "STATUS:CONFIRMED",
+        "SEQUENCE:0",
+        "BEGIN:VALARM",
+        "TRIGGER:-P1D",
+        "DESCRIPTION:Reminder",
+        "ACTION:DISPLAY",
+        "END:VALARM",
+        "END:VEVENT"
+    ].join("\r\n")).join("\r\n");
 
-        const fullIcs = generateFullIcs();
-        await ctx.replyWithDocument({ 
-            source: Buffer.from(fullIcs), 
-            filename: "gstrdnmc-tours-2026.ics" 
-        }, {
-            caption: "Скачать весь календарь одним файлом (.ics)"
-        });
-    });
-    
-    bot.command("gpx", async (ctx) => {
-        const url = ctx.payload;
-        if (!url) {
-            return ctx.reply("Обход ограничений Komoot на скачивание GPX. Вставьте ссылку на маршрут Komoot после /gpx, например: /gpx https://www.komoot.com/tour/... Сгенерированный файл будет готов к экспорту в Telegram или сторонние навигаторы.\n\nМаршруты Гастродинамики можно посмотреть в коллекциях Komoot, нажав на кнопку KOMOOT в меню.");
-        }
-        
-        ctx.reply("Конвертирую...");
-        const result = await convertKomootToGpx(url);
-        
-        if (result) {
-            ctx.replyWithDocument({ source: Buffer.from(result.content), filename: result.filename });
-        } else {
-            ctx.reply("Не удалось конвертировать маршрут. Проверьте ссылку или попробуйте позже.");
-        }
-    });
+    return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Gastrodynamica//Tour Calendar//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", events, "END:VCALENDAR"].join("\r\n");
+}
 
-    bot.command("update_menu", async (ctx) => {
-        try {
-            const commands = [
-                { command: 'manifest', description: 'манифест комьюнити' },
-                { command: 'rules', description: 'правила для райдов' },
-                { command: 'calendar', description: 'календарь на сезон' },
-                { command: 'gpx', description: 'обход ограничений Komoot' },
-                { command: 'pressure', description: 'давление в шинах' },
-                { command: 'resto', description: 'карта ресторанов' },
-                { command: 'komoot', description: 'коллекции маршрутов' },
-                { command: 'rainfree', description: 'ищет сухие дороги' },
-            ];
-            await ctx.telegram.deleteMyCommands();
-            await ctx.telegram.setMyCommands(commands);
-            await ctx.telegram.setChatMenuButton({ menuButton: { type: 'default' } });
-            await ctx.telegram.setMyCommands(commands, { scope: { type: 'all_private_chats' } });
-            await ctx.telegram.setMyCommands(commands, { scope: { type: 'all_private_chats' }, language_code: 'ru' });
-            await ctx.telegram.setMyCommands(commands, { scope: { type: 'all_group_chats' } });
-            await ctx.telegram.setMyCommands(commands, { scope: { type: 'all_chat_administrators' } });
-            await ctx.reply("✅ Бургер-меню обновлено и команды возвращены! Попробуйте перезапустить Telegram.");
-        } catch (err: any) {
-            await ctx.reply(`❌ Ошибка обновления: ${err.message}`);
-        }
-    });
+async function getSetting(key: string): Promise<string | null> {
+    if (redis) {
+        try { return await redis.get(key); } catch (e) { return null; }
+    }
+    return memorySettings.get(key) || null;
+}
 
-    // Gemini AI integration for general chat
-    bot.on("text", async (ctx) => {
-        // Ignore commands (they are handled by specific handlers)
-        if (ctx.message.text.startsWith("/")) return;
-
-        // Only respond to AI queries in private chats
-        if (ctx.chat.type !== 'private') return;
-
-        try {
-            // Helper to check if a key is a placeholder or invalid
-            const isPlaceholder = (k: string | null | undefined) => 
-                !k || k.trim().length < 10 || k.includes("YOUR_") || k === "MY_GEMINI_API_KEY";
-
-            const envGemini = process.env.GEMINI_API_KEY;
-            const envApi = process.env.API_KEY;
-            
-            // Filter out placeholders and find the first "real" key
-            const keys = [envGemini, envApi, manualApiKey];
-            const apiKey = keys.find(k => !isPlaceholder(k));
-            
-            // Debug logging (server-side only)
-            const source = apiKey === envGemini ? 'ENV_GEMINI' : 
-                          apiKey === envApi ? 'ENV_API' : 
-                          apiKey === manualApiKey ? 'MANUAL' : 'NONE';
-            
-            if (!apiKey) {
-                const foundSomething = keys.find(k => k && k.length > 0);
-                const debugInfo = foundSomething ? `(Обнаружен плейсхолдер: ${foundSomething.substring(0, 4)}..., длина: ${foundSomething.length})` : "(Ключ не найден)";
-                console.error(`[AI Error] API key missing or invalid: ${debugInfo}`);
-                return await ctx.reply(`Ошибка: API ключ для ИИ не настроен. Бот не может ответить.\n\nПожалуйста, добавьте рабочий ключ в настройках проекта (Secrets -> GEMINI_API_KEY) или через веб-интерфейс бота.`);
-            }
-
-            try {
-                const ai = new GoogleGenAI({ apiKey });
-                const response = await ai.models.generateContent({
-                    model: "gemini-3-flash-preview",
-                    contents: [{ role: 'user', parts: [{ text: ctx.message.text }] }],
-                    config: {
-                        systemInstruction: "Ты — помощник велосипедного комьюнити 'Гастродинамика'. Твоя задача — отвечать на вопросы участников, помогать с информацией о заездах, велосипедах и еде. Будь дружелюбным, лаконичным и полезным. Никогда не используй эмодзи, иконки или любые другие графические символы в своих ответах. Если пользователь спрашивает что-то, на что есть специальная команда, напомни ему об этом (/manifest, /rules, /calendar, /gpx, /pressure, /resto, /komoot, /rainfree). Важно: команда /gpx нужна для скачивания файла по ссылке пользователя, а коллекции маршрутов Гастродинамики доступны по кнопке KOMOOT. Команда /rainfree ищет сухие дороги для катания. Команда /pressure предназначена исключительно для подбора корректного давления в шинах; никогда не давай советов по выбору самой резины (покрышек), вместо этого направляй пользователя к команде /pressure."
-                    }
-                });
-                
-                if (response.text) {
-                    await ctx.reply(response.text);
-                } else {
-                    await ctx.reply("К сожалению, я не смог сгенерировать ответ. Попробуйте перефразировать вопрос.");
-                }
-            } catch (innerError: any) {
-                console.error("[AI Runtime Error]:", innerError);
-                const innerMsg = innerError?.message || "";
-                if (innerMsg.includes("API key not valid") || innerMsg.includes("API_KEY_INVALID")) {
-                    await ctx.reply("Критическая ошибка: Используемый API ключ недействителен. Пожалуйста, проверьте настройки ключа в AI Studio.");
-                } else {
-                    throw innerError; // Передаем дальше в общий обработчик
-                }
-            }
-        } catch (error: any) {
-            console.error("Gemini error details:", error);
-            const errorMsg = error?.message || error?.toString() || "Unknown error";
-            
-            if (errorMsg.includes("API key not valid")) {
-                await ctx.reply("Ошибка: Ваш API ключ для Gemini недействителен. Пожалуйста, получите новый ключ на ai.google.dev и обновите его в настройках.");
-            } else if (errorMsg.includes("quota")) {
-                await ctx.reply("Ошибка: Превышена квота (лимит) вашего API ключа. Попробуйте позже или используйте другой ключ.");
-            } else if (errorMsg.includes("location")) {
-                await ctx.reply("Ошибка: API Gemini недоступно в вашем регионе. Попробуйте использовать ключ, созданный в другом регионе, или проверьте настройки проекта.");
-            } else {
-                await ctx.reply(`Произошла ошибка при обращении к ИИ: ${errorMsg.substring(0, 100)}...`);
-            }
-        }
-    });
-
-    // Настраиваем webhook для Vercel или fallback для локального запуска
-    if (process.env.VERCEL_URL || process.env.VERCEL) {
-      // Использовать URL Vercel или fallback, если переменная не задана корректно
-      const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-      const webhookUrl = `https://${host}/api/webhook`; // Настроим четкий роут для webhook
-      
-      // Do not block startServer on setWebhook
-      bot.telegram.setWebhook(webhookUrl)
-        .then(() => console.log(`[Webhook] Set to ${webhookUrl}`))
-        .catch(err => console.error("[Webhook] Error setting webhook:", err));
-
-      // Обработчик для webhook
-      app.use(bot.webhookCallback('/api/webhook'));
+async function saveSetting(key: string, value: string): Promise<void> {
+    if (redis) {
+        try { await redis.set(key, value); } catch (e) {}
     } else {
-      bot.launch()
-        .then(() => console.log("Telegram bot started (polling)."))
-        .catch((err) => console.error("Failed to start Telegram bot:", err));
-      
-      process.once("SIGINT", () => bot.stop("SIGINT"));
-      process.once("SIGTERM", () => bot.stop("SIGTERM"));
+        memorySettings.set(key, value);
     }
+}
 
-    // API routes
-    app.get("/api/health", (req, res) => {
-      res.json({ status: "ok" });
-    });
-
-    app.get("/api/calendar/full.ics", (req, res) => {
-        const icsContent = generateFullIcs();
-        res.setHeader("Content-Type", "text/calendar; charset=utf-8");
-        res.setHeader("Content-Disposition", 'attachment; filename="gstrdnmc-tours-2026.ics"');
-        res.send(icsContent);
-    });
-
-    app.get("/api/calendar/:tourId.ics", (req, res) => {
-        const { tourId } = req.params;
-        const tour = TOURS.find(t => t.id === tourId);
-        
-        if (!tour) {
-            return res.status(404).send("Tour not found");
-        }
-
-        const icsContent = generateIcs(tour);
-        res.setHeader("Content-Type", "text/calendar; charset=utf-8");
-        res.setHeader("Content-Disposition", `attachment; filename="${tour.id}.ics"`);
-        res.send(icsContent);
-    });
-
-    app.get("/api/tours/:tourId", (req, res) => {
-        const { tourId } = req.params;
-        const tour = TOURS.find(t => t.id === tourId);
-        if (!tour) return res.status(404).json({ error: "Tour not found" });
-        res.json(tour);
-    });
-
-    app.get("/api/config", (req, res) => {
-      try {
-        const envGemini = process.env.GEMINI_API_KEY;
-        const envApi = process.env.API_KEY;
-        
-        const isPlaceholder = (k: string | null | undefined) => 
-            !k || k.trim().length < 10 || k.includes("YOUR_") || k === "MY_GEMINI_API_KEY";
-
-        let source = 'NONE';
-        if (!isPlaceholder(envGemini)) source = 'ENV_GEMINI';
-        else if (!isPlaceholder(envApi)) source = 'ENV_API';
-        else if (!isPlaceholder(manualApiKey)) source = 'MANUAL';
-
-        res.json({
-          hasKey: source !== 'NONE',
-          source: source,
-          botInfo: { username: bot.botInfo?.username || "bot" }
-        });
-      } catch (err) {
-        res.json({ hasKey: !!manualApiKey, source: 'ERROR', botInfo: null });
-      }
-    });
-
-    app.get("/api/test-ai", async (req, res) => {
-        try {
-            const isPlaceholder = (k: string | null | undefined) => 
-                !k || k.trim().length < 10 || k.includes("YOUR_") || k === "MY_GEMINI_API_KEY";
-
-            const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => !isPlaceholder(k));
-            
-            if (!apiKey) {
-                return res.status(400).json({ error: "API key not configured" });
-            }
-
-            const ai = new GoogleGenAI({ apiKey });
-            const response = await ai.models.generateContent({
-                model: "gemini-3-flash-preview",
-                contents: "Say 'OK' if you can hear me.",
-            });
-            res.json({ status: "ok", response: response.text });
-        } catch (err: any) {
-            res.status(500).json({ error: err.message });
-        }
-    });
-
-    app.post("/api/config", express.json(), async (req, res) => {
-      const { apiKey } = req.body;
-      console.log("POST /api/config received. Body keys:", Object.keys(req.body));
-      if (apiKey && apiKey !== '********') {
-        manualApiKey = apiKey;
-        await saveSetting("gemini_api_key", apiKey);
-        console.log(`Manual API Key updated and saved to DB. New length: ${manualApiKey.length}, starts with: ${manualApiKey.substring(0, 4)}...`);
-        res.json({ status: "ok" });
-      } else if (apiKey === '********') {
-        console.log("Received placeholder key, ignoring update.");
-        res.json({ status: "ok", message: "No change" });
-      } else {
-        console.error("POST /api/config: No apiKey in body");
-        res.status(400).json({ error: "API key is required" });
-      }
-    });
-  }
-
-  // Vite middleware for development (only dynamic import to avoid breaking Vercel)
-  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string, content: string } | null> {
     try {
-      const vite = await import("vite");
-      const viteServer = await vite.createServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(viteServer.middlewares);
-    } catch (e) {
-      console.warn("Vite is not available.");
+        let html = '';
+        const proxyUrls = [`https://corsproxy.io/?${encodeURIComponent(komootUrl)}`, `https://api.allorigins.win/raw?url=${encodeURIComponent(komootUrl)}`];
+        for (const url of proxyUrls) {
+            try {
+                const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+                if (res.ok) { html = await res.text(); break; }
+            } catch (e) {}
+        }
+        if (!html) return null;
+        const startMarker = 'kmtBoot.setProps("';
+        const startIndex = html.indexOf(startMarker);
+        if (startIndex === -1) return null;
+        const jsonStart = startIndex + startMarker.length;
+        const endIndex = html.indexOf('");', jsonStart);
+        if (endIndex === -1) return null;
+        const data = JSON.parse(JSON.parse(`"${html.substring(jsonStart, endIndex)}"`));
+        const tourName = data?.page?._embedded?.tour?.name || 'route';
+        const coordinates = data?.page?._embedded?.tour?._embedded?.coordinates?.items;
+        if (!coordinates) return null;
+        const points = coordinates.map((c: any) => `      <trkpt lat="${c.lat}" lon="${c.lng}"><ele>${c.alt}</ele></trkpt>`).join('\n');
+        return { filename: `${tourName.replace(/[^a-z0-9]/gi, '_')}.gpx`, content: `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${tourName}</name></metadata><trk><name>${tourName}</name><trkseg>\n${points}\n</trkseg></trk></gpx>` };
+    } catch (e) { return null; }
+}
+
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const bot = new Telegraf(botToken || "");
+
+const mainKeyboard = {
+    keyboard: [
+        [{ text: "RAINFREE", web_app: { url: "https://rain-free.vercel.app" } }, { text: "TIRE PRESSURE", web_app: { url: "https://axs.sram.com/guides/tire/pressure" } }],
+        [{ text: "RESTO", web_app: { url: "https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=" } }, { text: "KOMOOT", web_app: { url: "https://www.komoot.com/user/1622023059217/collections" } }]
+    ],
+    resize_keyboard: true,
+    is_persistent: true
+};
+
+bot.start((ctx) => ctx.reply("Спрашивай меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с давлением в шинах и найду сухие дороги.", { reply_markup: mainKeyboard }));
+
+bot.command("rides", async (ctx) => {
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) return ctx.reply("Пока нет заездов. Попробуйте позже.");
+        let message = "<b>Ближайшие заезды Гастродинамики</b>\n\n";
+        for (const [date, info] of Object.entries(data.groupedByDate) as [string, any][]) {
+            const dateParts = (date as string).split('-');
+            const d = dateParts[2];
+            const m = dateParts[1];
+            message += `📅 <b>${info.dayName} (${d}.${m})</b>\n`;
+            for (const ride of info.rides) {
+                message += `• ${ride.routeName}\n  ${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n  Погода: ${ride.weatherParams.temperature}º, ветер ${ride.weatherParams.wind}\n  <a href="${ride.gpxUrl}">Скачать GPX</a>\n\n`;
+            }
+        }
+        await ctx.reply(message, { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any);
+    } catch (err) { ctx.reply("Не удалось загрузить данные о заездах."); }
+});
+
+bot.command("manifest", (ctx) => ctx.reply(MANIFEST_TEXT));
+bot.command("rules", (ctx) => ctx.reply(RULES_TEXT));
+bot.command("calendar", async (ctx) => {
+    const text = TOURS.map(t => `<b>${t.name}</b>\n${t.displayDate}\n${t.details}`).join("\n\n");
+    await ctx.reply(`Календарь 2026\n\n${text}`, { parse_mode: "HTML" });
+    await ctx.replyWithDocument({ source: Buffer.from(generateFullIcs()), filename: "calendar.ics" });
+});
+bot.command("gpx", async (ctx) => {
+    const url = ctx.payload;
+    if (!url) return ctx.reply("Вставьте ссылку на Komoot после /gpx");
+    const result = await convertKomootToGpx(url);
+    if (result) await ctx.replyWithDocument({ source: Buffer.from(result.content), filename: result.filename });
+    else ctx.reply("Не удалось конвертировать.");
+});
+
+bot.command("update_menu", async (ctx) => {
+    try {
+        const commands = [
+            { command: 'manifest', description: 'манифест комьюнити' },
+            { command: 'rules', description: 'правила для райдов' },
+            { command: 'calendar', description: 'календарь на сезон' },
+            { command: 'rides', description: 'ближайшие заезды' },
+            { command: 'gpx', description: 'обход ограничений Komoot' },
+            { command: 'pressure', description: 'давление в шинах' },
+            { command: 'resto', description: 'карта ресторанов' },
+            { command: 'komoot', description: 'коллекции маршрутов' },
+            { command: 'rainfree', description: 'ищет сухие дороги' },
+        ];
+        await ctx.telegram.setMyCommands(commands);
+        await ctx.reply("✅ Меню обновлено! /rides добавлена.");
+    } catch (err: any) {
+        await ctx.reply(`❌ Ошибка: ${err.message}`);
     }
-  } else {
-    app.use(express.static("dist"));
-  }
+});
 
-  // Не вызываем app.listen в Serverless среде
-  if (!process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  }
-  
-  return app;
-}
+bot.on("text", async (ctx) => {
+    if (ctx.chat.type !== 'private' || ctx.message.text.startsWith("/")) return;
+    const manualApiKey = await getSetting("gemini_api_key");
+    const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
+    if (!apiKey) return ctx.reply("API ключ для ИИ не настроен.");
+    try {
+        const ai = new (GoogleGenAI as any)(apiKey);
+        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(ctx.message.text);
+        await ctx.reply(result.response.text());
+    } catch (e) { 
+        console.error("AI Error:", e);
+        ctx.reply("Ошибка ИИ."); 
+    }
+});
 
-// Vercel serverless function export
-const appPromise = startServer();
+const app = express();
+app.use(express.json());
 
-export default async function handler(req: any, res: any) {
-  const app = await appPromise;
-  app(req, res);
-}
+// Main webhook handler
+app.post("/api/webhook", async (req, res) => {
+    try {
+        await bot.handleUpdate(req.body);
+        if (!res.headersSent) res.status(200).send("ok");
+    } catch (err) {
+        console.error("Webhook handle error:", err);
+        if (!res.headersSent) res.status(500).send("error");
+    }
+});
+
+// Health and Config API
+app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+app.get("/api/config", async (req, res) => {
+    const key = await getSetting("gemini_api_key");
+    res.json({ hasKey: !!key || !!process.env.GEMINI_API_KEY, botInfo: { username: bot.botInfo?.username || "bot" } });
+});
+app.post("/api/config", async (req, res) => {
+    if (req.body.apiKey) { await saveSetting("gemini_api_key", req.body.apiKey); res.json({ status: "ok" }); }
+    else res.status(400).json({ error: "API key required" });
+});
+
+app.get("/", (req, res) => res.send("Gastrodynamica Bot is running."));
+
+export default app;
