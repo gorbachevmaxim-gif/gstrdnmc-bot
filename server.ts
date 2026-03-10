@@ -283,6 +283,6 @@ app.post("/api/config", async (req, res) => {
     else res.status(400).json({ error: "API key required" });
 });
 
-app.get("/", (req, res) => res.send("Gastrodynamica Bot is running."));
+app.get("/", (req, res) => res.send("GSTRDNMC BOT is running."));
 
 export default app;
