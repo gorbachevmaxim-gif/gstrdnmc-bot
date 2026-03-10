@@ -225,26 +225,18 @@ bot.on("text", async (ctx) => {
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
     if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
     try {
-        // Use v1beta API with gemini-1.5-flash-latest
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
+        // Use the official SDK with custom apiVersion and correct headers
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { 
+            apiVersion: "v1beta",
+            customHeaders: {
                 "Origin": "https://gstrdnmc-bot.vercel.app",
                 "Referer": "https://gstrdnmc-bot.vercel.app/"
-            },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: ctx.message.text }] }]
-            })
+            }
         });
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API error ${response.status}: ${errorText}`);
-        }
-        
-        const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Нет ответа от ИИ";
+        const result = await model.generateContent(ctx.message.text);
+        const text = result.response.text();
         await ctx.reply(text);
     } catch (e: any) { 
         console.error("[AI Error]:", e);
