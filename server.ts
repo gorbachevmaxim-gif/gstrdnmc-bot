@@ -229,7 +229,9 @@ bot.on("text", async (ctx) => {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Origin": "https://gstrdnmc-bot.vercel.app",
+                "Referer": "https://gstrdnmc-bot.vercel.app/"
             },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: ctx.message.text }] }]
