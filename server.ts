@@ -226,7 +226,7 @@ bot.on("text", async (ctx) => {
     if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-002" });
         const result = await model.generateContent(ctx.message.text);
         const text = result.response.text();
         await ctx.reply(text);
