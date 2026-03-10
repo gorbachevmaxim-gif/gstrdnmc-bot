@@ -160,7 +160,7 @@ const mainKeyboard = {
     is_persistent: true
 };
 
-bot.start((ctx) => ctx.reply("Спрашивай меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с давлением в шинах и найду сухие дороги.", { reply_markup: mainKeyboard }));
+bot.start((ctx) => ctx.reply("Спроси меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с корректным давлением в шинах и найду сухие дороги для тебя.", { reply_markup: mainKeyboard }));
 
 bot.command("rides", async (ctx) => {
     try {
@@ -170,7 +170,7 @@ bot.command("rides", async (ctx) => {
         if (!response.ok) throw new Error(`API error: ${response.status}`);
         const data: any = await response.json();
         if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) return ctx.reply("Пока нет заездов. Попробуйте позже.");
-        let message = "<b>Ближайшие заезды Гастродинамики</b>\n\n";
+        let message = "<b>Райды на выходных</b>\n\n";
         for (const [date, info] of Object.entries(data.groupedByDate) as [string, any][]) {
             const dateParts = (date as string).split('-');
             const d = dateParts[2];
