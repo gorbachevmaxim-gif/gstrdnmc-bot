@@ -1,6 +1,6 @@
 import express from "express";
 import { Telegraf } from "telegraf";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import Redis from "ioredis";
 
@@ -225,11 +225,15 @@ bot.on("text", async (ctx) => {
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
     if (!apiKey) return ctx.reply("API ключ для ИИ не настроен.");
     try {
-        const ai = new (GoogleGenAI as any)(apiKey);
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(ctx.message.text);
-        await ctx.reply(result.response.text());
-    } catch (e) { ctx.reply("Ошибка ИИ."); }
+        const text = result.response.text();
+        await ctx.reply(text);
+    } catch (e: any) { 
+        console.error("[AI Error]:", e);
+        ctx.reply("Ошибка ИИ."); 
+    }
 });
 
 const app = express();
