@@ -225,11 +225,13 @@ bot.on("text", async (ctx) => {
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
     if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
     try {
-        // Use v1beta API with gemini-pro
+        // Use v1beta API with gemini-pro and proper headers
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Origin": "https://gstrdnmc-bot.vercel.app",
+                "Referer": "https://gstrdnmc-bot.vercel.app/"
             },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: ctx.message.text }] }]
