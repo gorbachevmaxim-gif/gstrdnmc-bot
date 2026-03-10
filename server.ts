@@ -153,9 +153,8 @@ const bot = new Telegraf(botToken || "");
 
 const mainKeyboard = {
     keyboard: [
-        [{ text: "/rides" }, { text: "RAINFREE", web_app: { url: "https://rain-free.vercel.app" } }],
-        [{ text: "TIRE PRESSURE", web_app: { url: "https://axs.sram.com/guides/tire/pressure" } }, { text: "RESTO", web_app: { url: "https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=" } }],
-        [{ text: "KOMOOT", web_app: { url: "https://www.komoot.com/user/1622023059217/collections" } }]
+        [{ text: "RAINFREE", web_app: { url: "https://rain-free.vercel.app" } }, { text: "TIRE PRESSURE", web_app: { url: "https://axs.sram.com/guides/tire/pressure" } }],
+        [{ text: "RESTO", web_app: { url: "https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=" } }, { text: "KOMOOT", web_app: { url: "https://www.komoot.com/user/1622023059217/collections" } }]
     ],
     resize_keyboard: true,
     is_persistent: true
@@ -219,6 +218,8 @@ bot.command("update_menu", async (ctx) => {
             { command: 'rainfree', description: 'ищет сухие дороги' },
         ];
         await ctx.telegram.setMyCommands(commands);
+        try { await ctx.telegram.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
+        try { await ctx.telegram.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
         await ctx.reply("✅ Меню обновлено!");
     } catch (err: any) {
         await ctx.reply(`❌ Ошибка: ${err.message}`);
