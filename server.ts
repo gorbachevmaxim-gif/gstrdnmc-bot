@@ -225,10 +225,10 @@ bot.on("text", async (ctx) => {
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
     if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
     try {
-        // Use the official SDK with custom apiVersion and correct headers
+        // Let's use standard API model name exactly as per Google AI Studio docs
+        // Also removing manual apiVersion specification as the SDK handles it
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { 
-            apiVersion: "v1beta",
             customHeaders: {
                 "Origin": "https://gstrdnmc-bot.vercel.app",
                 "Referer": "https://gstrdnmc-bot.vercel.app/"
