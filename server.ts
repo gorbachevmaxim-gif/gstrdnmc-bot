@@ -578,55 +578,23 @@ async function startServer() {
         }
     });
 
-    bot.launch()
-      .then(async () => {
-        console.log("Telegram bot started.");
-        // Set bot commands menu after launch
-        try {
-            const commands = [
-                { command: 'manifest', description: 'манифест комьюнити' },
-                { command: 'rules', description: 'правила для райдов' },
-                { command: 'calendar', description: 'календарь на сезон' },
-                { command: 'gpx', description: 'обход ограничений Komoot' },
-                { command: 'pressure', description: 'давление в шинах' },
-                { command: 'resto', description: 'карта ресторанов' },
-                { command: 'komoot', description: 'коллекции маршрутов' },
-                { command: 'rainfree', description: 'ищет сухие дороги' },
-            ];
-            
-            await bot.telegram.deleteMyCommands();
-            
-            // Set for default scope
-            await bot.telegram.setMyCommands(commands);
-            
-            // Ensure the menu button is set to default (will show commands if set)
-            await bot.telegram.setChatMenuButton({ menuButton: { type: 'default' } });
-            
-            // Set explicitly for private chats
-            await bot.telegram.setMyCommands(commands, { 
-                scope: { type: 'all_private_chats' } 
-            });
+    // Настраиваем webhook для Vercel или fallback для локального запуска
+    if (process.env.VERCEL_URL) {
+      const webhookUrl = `https://${process.env.VERCEL_URL}/api/webhook`;
+      bot.telegram.setWebhook(webhookUrl)
+        .then(() => console.log(`[Webhook] Set to ${webhookUrl}`))
+        .catch(err => console.error("[Webhook] Error setting webhook:", err));
 
-            // Set explicitly for RU language
-            await bot.telegram.setMyCommands(commands, { 
-                scope: { type: 'all_private_chats' },
-                language_code: 'ru'
-            });
-
-            // Set for groups
-            await bot.telegram.setMyCommands(commands, { scope: { type: 'all_group_chats' } });
-            await bot.telegram.setMyCommands(commands, { scope: { type: 'all_chat_administrators' } });
-            
-            console.log("Telegram commands menu updated successfully for all scopes (private, groups, admins) and languages.");
-        } catch (err) {
-            console.error("Failed to set bot commands:", err);
-        }
-      })
-      .catch((err) => console.error("Failed to start Telegram bot:", err));
-
-    // Enable graceful stop
-    process.once("SIGINT", () => bot.stop("SIGINT"));
-    process.once("SIGTERM", () => bot.stop("SIGTERM"));
+      // Обработчик для webhook
+      app.use(bot.webhookCallback('/api/webhook'));
+    } else {
+      bot.launch()
+        .then(() => console.log("Telegram bot started (polling)."))
+        .catch((err) => console.error("Failed to start Telegram bot:", err));
+      
+      process.once("SIGINT", () => bot.stop("SIGINT"));
+      process.once("SIGTERM", () => bot.stop("SIGTERM"));
+    }
 
     // API routes
     app.get("/api/health", (req, res) => {
