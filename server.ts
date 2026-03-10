@@ -3,8 +3,13 @@ import { Bot, webhookCallback, InputFile } from "grammy";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import Redis from "ioredis";
+import fs from "fs";
 
-dotenv.config();
+if (fs.existsSync(".env.local")) {
+    dotenv.config({ path: ".env.local" });
+} else {
+    dotenv.config();
+}
 
 // Database setup
 const redisUrl = process.env.REDIS_URL || '';
@@ -199,7 +204,7 @@ bot.command("gpx", async (ctx) => {
     else ctx.reply("Не удалось конвертировать.");
 });
 
-bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">калькулятор</a> точного давления для ваших колес.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">калькулятор</a> точного давления для колес.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
 bot.command("resto", (ctx) => ctx.reply("места на <a href=\"https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=\">Яндекс Карты</a> с ресторанами и кафе для старта и финиша райда во множестве городов, где мы были или будем.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
 bot.command("komoot", (ctx) => ctx.reply("<a href=\"https://www.komoot.com/user/1622023059217/collections\">коллекции</a> маршрутов Гастродинамики.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
 bot.command("rainfree", (ctx) => ctx.reply("Ищет <a href=\"https://rain-free.vercel.app\">сухие дороги</a> для тебя", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
@@ -264,7 +269,9 @@ const app = express();
 app.use(express.json());
 
 // Main webhook handler
-app.use("/api/webhook", webhookCallback(bot, "express"));
+if (process.env.NODE_ENV === "production") {
+    app.use("/api/webhook", webhookCallback(bot, "express"));
+}
 
 // Health and Config API
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
@@ -299,5 +306,21 @@ app.post("/api/config", async (req, res) => {
 });
 
 app.get("/", (req, res) => res.send("GSTRDNMC BOT is running."));
+
+if (process.env.NODE_ENV !== "production") {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+    
+    // Start bot with polling locally
+    bot.start({
+        onStart: (botInfo) => {
+            console.log(`Bot is active and running as @${botInfo.username}`);
+        }
+    }).catch(err => {
+        console.error("Failed to start bot:", err);
+    });
+}
 
 export default app;
