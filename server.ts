@@ -588,15 +588,18 @@ async function startServer() {
     });
 
     // Настраиваем webhook для Vercel или fallback для локального запуска
-    if (process.env.VERCEL_URL) {
-      const webhookUrl = `https://${process.env.VERCEL_URL}/`; // Vercel routes everything to server.ts
+    if (process.env.VERCEL_URL || process.env.VERCEL) {
+      // Использовать URL Vercel или fallback, если переменная не задана корректно
+      const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+      const webhookUrl = `https://${host}/api/webhook`; // Настроим четкий роут для webhook
+      
       // Do not block startServer on setWebhook
       bot.telegram.setWebhook(webhookUrl)
         .then(() => console.log(`[Webhook] Set to ${webhookUrl}`))
         .catch(err => console.error("[Webhook] Error setting webhook:", err));
 
-      // Обработчик для webhook (на корневой URL, т.к. vercel.json перенаправляет все)
-      app.use(bot.webhookCallback('/'));
+      // Обработчик для webhook
+      app.use(bot.webhookCallback('/api/webhook'));
     } else {
       bot.launch()
         .then(() => console.log("Telegram bot started (polling)."))
