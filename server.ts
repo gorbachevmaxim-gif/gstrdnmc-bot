@@ -36,7 +36,7 @@ const TOURS = [
 
 const MANIFEST_TEXT = `Многие спрашивают, как можно присоединиться к Гастродинамике. Здесь мы описали что нужно делать, чтобы быть внутри комьюнити.
 
-1. Быть вовлеченным в нашу общую жизнь, помогать с организацией туров, не стесняться, проявлять инициативу. У каждого из нас есть свои сильные стороны, профессиональные навыки, связи в обществе и многое другое, что можно отдать ребятам в комьюнити. Подумайте что можете сделать именно вы.
+1. Быть вовлеченным в нашу общую жизнь, помогать с организацией туров, не стесняться, проявлять инициативу. У каждого из нас есть свои сильный стороны, профессиональные навыки, связи в обществе и многое другое, что можно отдать ребятам в комьюнити. Подумайте что можете сделать именно вы.
 
 2. Быть сильным во время заездов, не жаловаться, рассчитывать свои силы и поддерживать друг друга.
 
@@ -163,28 +163,13 @@ const mainKeyboard = {
 bot.start((ctx) => ctx.reply("Спрашивай меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с давлением в шинах и найду сухие дороги.", { reply_markup: mainKeyboard }));
 
 bot.command("rides", async (ctx) => {
-    console.log(`[Rides Command] Received request from ${ctx.chat.id}`);
     try {
         const apiKey = process.env.BOT_API_KEY;
         const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
-        const fetchUrl = `${baseUrl}/api/bot-data`;
-        console.log(`[Rides Command] Fetching from ${fetchUrl}`);
-        
-        const response = await fetch(fetchUrl, { 
-            headers: { 'x-api-key': apiKey || '' } 
-        });
-
-        if (!response.ok) {
-            console.error(`[Rides Command] API returned ${response.status}`);
-            throw new Error(`API error: ${response.status}`);
-        }
-        
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
         const data: any = await response.json();
-        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) {
-             console.log(`[Rides Command] No rides found in data`);
-             return ctx.reply("Пока нет заездов. Попробуйте позже.");
-        }
-
+        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) return ctx.reply("Пока нет заездов. Попробуйте позже.");
         let message = "<b>Ближайшие заезды Гастродинамики</b>\n\n";
         for (const [date, info] of Object.entries(data.groupedByDate) as [string, any][]) {
             const dateParts = (date as string).split('-');
@@ -196,11 +181,7 @@ bot.command("rides", async (ctx) => {
             }
         }
         await ctx.reply(message, { parse_mode: "HTML", link_preview_options: { is_disabled: true } } as any);
-        console.log(`[Rides Command] Message sent successfully`);
-    } catch (err) { 
-        console.error("[Rides Command] Error:", err);
-        ctx.reply("Не удалось загрузить данные о заездах."); 
-    }
+    } catch (err) { ctx.reply("Не удалось загрузить данные о заездах."); }
 });
 
 bot.command("manifest", (ctx) => ctx.reply(MANIFEST_TEXT));
@@ -219,7 +200,6 @@ bot.command("gpx", async (ctx) => {
 });
 
 bot.command("update_menu", async (ctx) => {
-    console.log(`[Update Menu] Received request from ${ctx.chat.id}`);
     try {
         const commands = [
             { command: 'manifest', description: 'манифест комьюнити' },
@@ -233,9 +213,8 @@ bot.command("update_menu", async (ctx) => {
             { command: 'rainfree', description: 'ищет сухие дороги' },
         ];
         await ctx.telegram.setMyCommands(commands);
-        await ctx.reply("✅ Меню обновлено! /rides добавлена.");
+        await ctx.reply("✅ Меню обновлено!");
     } catch (err: any) {
-        console.error("[Update Menu] Error:", err);
         await ctx.reply(`❌ Ошибка: ${err.message}`);
     }
 });
@@ -250,10 +229,7 @@ bot.on("text", async (ctx) => {
         const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(ctx.message.text);
         await ctx.reply(result.response.text());
-    } catch (e) { 
-        console.error("AI Error:", e);
-        ctx.reply("Ошибка ИИ."); 
-    }
+    } catch (e) { ctx.reply("Ошибка ИИ."); }
 });
 
 const app = express();
@@ -261,12 +237,17 @@ app.use(express.json());
 
 // Main webhook handler
 app.post("/api/webhook", async (req, res) => {
-    console.log(`[Webhook] Received update:`, JSON.stringify(req.body));
     try {
+        // Telegraf needs getMe info to handle updates. 
+        // In Serverless, we fetch it ONCE per instance life.
+        if (!bot.botInfo) {
+            bot.botInfo = await bot.telegram.getMe();
+        }
+        
         await bot.handleUpdate(req.body);
         if (!res.headersSent) res.status(200).send("ok");
-    } catch (err) {
-        console.error("[Webhook] Handle error:", err);
+    } catch (err: any) {
+        console.error("[Webhook] error:", err);
         if (!res.headersSent) res.status(500).send("error");
     }
 });
@@ -275,7 +256,7 @@ app.post("/api/webhook", async (req, res) => {
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.get("/api/config", async (req, res) => {
     const key = await getSetting("gemini_api_key");
-    res.json({ hasKey: !!key || !!process.env.GEMINI_API_KEY, botInfo: { username: bot.botInfo?.username || "bot" } });
+    res.json({ hasKey: !!key || !!process.env.GEMINI_API_KEY, botTokenStatus: botToken ? "PRESENT" : "MISSING" });
 });
 app.post("/api/config", async (req, res) => {
     if (req.body.apiKey) { await saveSetting("gemini_api_key", req.body.apiKey); res.json({ status: "ok" }); }
