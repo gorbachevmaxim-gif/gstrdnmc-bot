@@ -267,18 +267,13 @@ bot.on("message:text", async (ctx) => {
     const manualApiKey = await getSetting("gemini_api_key");
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
     if (!apiKey) return ctx.reply("API ключ для AI не настроен. Напиши /start для инструкций.");
+    
     try {
-        // Using Gemini 3 Flash - latest model
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Origin": "https://gstrdnmc-bot.vercel.app",
-                "Referer": "https://gstrdnmc-bot.vercel.app/"
-            },
-        body: JSON.stringify({
-            systemInstruction: {
-                parts: [{ text: `Ты — @gstrdnmc_bot, интеллектуальный ассистент вело-комьюнити «Гастродинамика». Твоя задача — помогать участникам планировать сезон, понимать ценности сообщества и готовиться к райдам.
+        // Используем официальную библиотеку GoogleGenerativeAI для надёжности
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash",
+            systemInstruction: { role: "user", parts: [{ text: `Ты — @gstrdnmc_bot, интеллектуальный ассистент вело-комьюнити «Гастродинамика». Твоя задача — помогать участникам планировать сезон, понимать ценности сообщества и готовиться к райдам.
 
 Стиль общения:
 - Лаконичность: Ответ должен занимать не более 400-500 символов (15-25 секунд чтения).
@@ -310,23 +305,22 @@ bot.on("message:text", async (ctx) => {
 - Текст выводи без эмодзи.
 
 Пример короткого ответа:
-«В Узбекистан едем с 9 по 12 апреля. Это 4 дня и 2 больших райда через сады и горы Тянь-Шаня. Главное — подготовь «горную» кассу и проверь покрышки: в Самарканде важен зацеп. Все детали в /calendar.»` }]
-            },
-            contents: [{ parts: [{ text: ctx.message.text }] }],
+«В Узбекистан едем с 9 по 12 апреля. Это 4 дня и 2 больших райда через сады и горы Тянь-Шаня. Главное — подготовь «горную» кассу и проверь покрышки: в Самарканде важен зацеп. Все детали в /calendar.»` }] }
+        });
+        
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: ctx.message.text }] }],
             generationConfig: {
                 temperature: 0.3,
                 maxOutputTokens: 250
             }
-        })
         });
+        const aiText = result.response.text();
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API error ${response.status}: ${errorText}`);
+        if (!aiText || aiText.length === 0) {
+            return ctx.reply("Не удалось получить ответ. Попробуй ещё раз.");
         }
         
-        const data = await response.json();
-        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Нет ответа от AI";
         await ctx.reply(aiText);
     } catch (e: any) { 
         console.error("[AI Error]:", e);
