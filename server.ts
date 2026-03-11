@@ -5,6 +5,11 @@ import dotenv from "dotenv";
 import Redis from "ioredis";
 import fs from "fs";
 
+// ✅ VERCEL TIMEOUT FIX: Увеличиваем лимит времени до 60 секунд
+// По умолчанию Vercel убивает функции через 10 секунд, 
+// а генерация ответа от ИИ может занимать 5-12 секунд
+export const maxDuration = 60;
+
 if (fs.existsSync(".env.local")) {
     dotenv.config({ path: ".env.local" });
 } else {
