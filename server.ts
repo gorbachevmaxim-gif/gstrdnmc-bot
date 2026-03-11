@@ -7,7 +7,7 @@ import fs from "fs";
 
 // ✅ VERCEL TIMEOUT FIX: Увеличиваем лимит времени до 60 секунд
 // По умолчанию Vercel убивает функции через 10 секунд, 
-// а генерация ответа от ИИ может занимать 5-12 секунд
+// а генерация ответа от AI может занимать 5-12 секунд
 export const maxDuration = 60;
 
 if (fs.existsSync(".env.local")) {
@@ -193,7 +193,7 @@ const mainKeyboard = {
 bot.command("start", (ctx) => ctx.reply("Привет! Я @gstrdnmc_bot. Спроси меня о турах, маршрутах или давлении в шинах! Напиши /help для списка команд.", { reply_markup: mainKeyboard }));
 
 bot.command("help", async (ctx) => {
-    await ctx.reply("Просто напишите мне ваш вопрос текстом, и я постараюсь помочь.\n\n📋 Доступные команды:\n/manifest - манифест комьюнити\n/rules - правила для райдов\n/calendar - календарь туров\n/rides - маршруты на выходные\n/gpx - скачать GPX из Komoot\n/pressure - давление в шинах\n/resto - карта ресторанов\n/komoot - коллекции маршрутов\n/rainfree - поиск сухих дорог");
+    await ctx.reply("Просто напиши мне вопрос текстом, и я постараюсь помочь.\n\nДоступные команды:\n/manifest - манифест комьюнити\n/rules - правила для райдов\n/calendar - календарь туров\n/rides - маршруты на выходные\n/gpx - скачать GPX из Komoot\n/pressure - давление в шинах\n/resto - карта ресторанов\n/komoot - коллекции маршрутов\n/rainfree - поиск сухих дорог");
 });
 
 bot.command("rides", async (ctx) => {
@@ -209,7 +209,7 @@ bot.command("rides", async (ctx) => {
             const dateParts = (date as string).split('-');
             const d = dateParts[2];
             const m = dateParts[1];
-            message += `📅 <b>${info.dayName} (${d}.${m})</b>\n`;
+            message += `<b>${info.dayName} (${d}.${m})</b>\n`;
             for (const ride of info.rides) {
                 message += `• ${ride.routeName}\n  ${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n  Погода: ${ride.weatherParams.temperature}º, ветер ${ride.weatherParams.wind}\n  <a href="${ride.gpxUrl}">Скачать GPX</a>\n\n`;
             }
@@ -256,9 +256,9 @@ bot.command("update_menu", async (ctx) => {
         await ctx.api.setMyCommands(commands);
         try { await ctx.api.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
         try { await ctx.api.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
-        await ctx.reply("✅ Меню обновлено!");
+        await ctx.reply("Меню обновлено!");
     } catch (err: any) {
-        await ctx.reply(`❌ Ошибка: ${err.message}`);
+        await ctx.reply(`Ошибка: ${err.message}`);
     }
 });
 
@@ -266,7 +266,7 @@ bot.on("message:text", async (ctx) => {
     if (ctx.chat.type !== 'private' || ctx.message.text.startsWith("/")) return;
     const manualApiKey = await getSetting("gemini_api_key");
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
-    if (!apiKey) return ctx.reply("API ключ для ИИ не настроен. Напишите /start для инструкций.");
+    if (!apiKey) return ctx.reply("API ключ для AI не настроен. Напиши /start для инструкций.");
     try {
         // Using Gemini 3 Flash - latest model
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
@@ -287,12 +287,12 @@ bot.on("message:text", async (ctx) => {
         }
         
         const data = await response.json();
-        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Нет ответа от ИИ";
+        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Нет ответа от AI";
         await ctx.reply(aiText);
     } catch (e: any) { 
         console.error("[AI Error]:", e);
         const errorMsg = e?.message || e?.toString() || "Unknown error";
-        ctx.reply(`Ошибка ИИ: ${errorMsg.substring(0, 200)}`); 
+        ctx.reply(`Ошибка AI: ${errorMsg.substring(0, 200)}`); 
     }
 });
 
@@ -324,9 +324,9 @@ app.get("/api/update_commands", async (req, res) => {
         await bot.api.setMyCommands(commands);
         try { await bot.api.setMyCommands(commands, { language_code: "ru" }); } catch (e) {}
         try { await bot.api.setMyCommands(commands, { language_code: "en" }); } catch (e) {}
-        res.send("✅ Commands successfully updated via API!");
+        res.send("Commands successfully updated via API!");
     } catch (err: any) {
-        res.status(500).send(`❌ Error: ${err.message}`);
+        res.status(500).send(`Error: ${err.message}`);
     }
 });
 app.get("/api/config", async (req, res) => {
