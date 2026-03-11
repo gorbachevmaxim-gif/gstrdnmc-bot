@@ -10,11 +10,12 @@ import fs from "fs";
 // а генерация ответа от AI может занимать 5-12 секунд
 export const maxDuration = 60;
 
-if (fs.existsSync(".env.local")) {
-    dotenv.config({ path: ".env.local" });
-} else {
-    dotenv.config();
-}
+// ✅ Загружаем переменные окружения из разных файлов
+// В Vercel продакшене переменные уже в process.env, локально - из .env.local
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
+
+console.log("[INIT] Загрузка env: GEMINI_API_KEY =", process.env.GEMINI_API_KEY ? "ЕСТЬ" : "НЕТ");
 
 // Database setup
 const redisUrl = process.env.REDIS_URL || '';
