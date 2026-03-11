@@ -264,8 +264,18 @@ bot.command("update_menu", async (ctx) => {
 
 bot.on("message:text", async (ctx) => {
     if (ctx.chat.type !== 'private' || ctx.message.text.startsWith("/")) return;
+    
+    // Логируем что пришло сообщение
+    console.log("[DEBUG] Получено сообщение от пользователя:", ctx.message.text);
+    console.log("[DEBUG] GEMINI_API_KEY exists:", !!process.env.GEMINI_API_KEY, "length:", process.env.GEMINI_API_KEY?.length);
+    console.log("[DEBUG] API_KEY exists:", !!process.env.API_KEY, "length:", process.env.API_KEY?.length);
+    
     const manualApiKey = await getSetting("gemini_api_key");
+    console.log("[DEBUG] manualApiKey exists:", !!manualApiKey, "length:", manualApiKey?.length);
+    
     const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
+    console.log("[DEBUG] Выбранный apiKey:", apiKey ? apiKey.substring(0, 5) + "..." : "NULL");
+    
     if (!apiKey) return ctx.reply("API ключ для AI не настроен. Напиши /start для инструкций.");
     
     try {
