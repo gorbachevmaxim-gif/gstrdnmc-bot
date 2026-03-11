@@ -1,6 +1,6 @@
 import express from "express";
 import { Bot, webhookCallback, InputFile } from "grammy";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import Redis from "ioredis";
 import fs from "fs";
@@ -15,7 +15,7 @@ export const maxDuration = 60;
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
-console.log("[INIT] Загрузка env: GEMINI_API_KEY =", process.env.GEMINI_API_KEY ? "ЕСТЬ" : "НЕТ");
+console.log("[INIT] Загрузка env: GROQ_API_KEY =", process.env.GROQ_API_KEY ? "ЕСТЬ" : "НЕТ");
 
 // Database setup
 const redisUrl = process.env.REDIS_URL || '';
@@ -268,13 +268,9 @@ bot.on("message:text", async (ctx) => {
     
     // Логируем что пришло сообщение
     console.log("[DEBUG] Получено сообщение от пользователя:", ctx.message.text);
-    console.log("[DEBUG] GEMINI_API_KEY exists:", !!process.env.GEMINI_API_KEY, "length:", process.env.GEMINI_API_KEY?.length);
-    console.log("[DEBUG] API_KEY exists:", !!process.env.API_KEY, "length:", process.env.API_KEY?.length);
+    console.log("[DEBUG] GROQ_API_KEY exists:", !!process.env.GROQ_API_KEY, "length:", process.env.GROQ_API_KEY?.length);
     
-    const manualApiKey = await getSetting("gemini_api_key");
-    console.log("[DEBUG] manualApiKey exists:", !!manualApiKey, "length:", manualApiKey?.length);
-    
-    const apiKey = [process.env.GEMINI_API_KEY, process.env.API_KEY, manualApiKey].find(k => k && k.length > 10);
+    const apiKey = process.env.GROQ_API_KEY;
     console.log("[DEBUG] Выбранный apiKey:", apiKey ? apiKey.substring(0, 5) + "..." : "NULL");
     
     if (!apiKey) return ctx.reply("API ключ для AI не настроен. Напиши /start для инструкций.");
@@ -309,16 +305,20 @@ ${RULES_TEXT}
         // Лог для отладки: проверим, что ключ реально доходит
         console.log("Использую ключ (начало):", apiKey.substring(0, 5));
 
-        // Используем официальную библиотеку GoogleGenerativeAI для надёжности
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-        // Классический подход - простой и надёжный
-        const result = await model.generateContent([
-            systemPrompt,
-            ctx.message.text
-        ]);
-        const aiText = result.response.text();
+        // Используем Groq SDK
+        const groq = new Groq({ apiKey: apiKey });
+        
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: ctx.message.text }
+            ],
+            model: "llama-3.1-70b-versatile", // Бесплатная модель
+            temperature: 0.2,
+            max_tokens: 300,
+        });
+        
+        const aiText = chatCompletion.choices[0]?.message?.content;
         
         if (!aiText || aiText.length === 0) {
             return ctx.reply("Не удалось получить ответ. Попробуй ещё раз.");
