@@ -312,22 +312,14 @@ ${RULES_TEXT}
         // Используем официальную библиотеку GoogleGenerativeAI для надёжности
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash", // Используем стабильную версию
+            model: "gemini-1.5-flash", // Стабильная версия
         });
 
-        // Для 2.0 Flash лучше передавать системную инструкцию прямо в generateContent, 
-        // если инициализация модели с ней иногда багует в разных SDK
-        const result = await model.generateContent({
-            contents: [
-                { role: "user", parts: [{ text: systemPrompt }] }, // Передаем промт как контекст
-                { role: "model", parts: [{ text: "Принято. Я буду отвечать строго по правилам Гастродинамики." }] },
-                { role: "user", parts: [{ text: ctx.message.text }] }
-            ],
-            generationConfig: {
-                temperature: 0.2,
-                maxOutputTokens: 300,
-            }
-        });
+        // Классический подход - простой и надёжный
+        const result = await model.generateContent([
+            systemPrompt,
+            ctx.message.text
+        ]);
         const aiText = result.response.text();
         
         if (!aiText || aiText.length === 0) {
