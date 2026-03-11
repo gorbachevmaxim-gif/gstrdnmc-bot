@@ -295,6 +295,9 @@ ${RULES_TEXT}
 - Без эмодзи. Жирный текст для дат и названий.
 `;
 
+        // Лог для отладки: проверим, что ключ реально доходит
+        console.log("Использую ключ (начало):", apiKey.substring(0, 5));
+
         // Используем официальную библиотеку GoogleGenerativeAI для надёжности
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
