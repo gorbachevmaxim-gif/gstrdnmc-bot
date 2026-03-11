@@ -161,6 +161,23 @@ async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new Bot(botToken || "000000000:mock_token");
 
+// ==========================================
+// БЛОК 1: ЗАЩИТА ОТ СПАМА И ПОВТОРОВ (Middleware)
+// ==========================================
+bot.use(async (ctx, next) => {
+  // Если сообщение пришло слишком поздно (старше 2 минут) - игнорируем его.
+  // Это убивает ту самую "бесконечную петлю" Телеграма.
+  if (ctx.message?.date) {
+    const now = Math.floor(Date.now() / 1000);
+    const messageAge = now - ctx.message.date;
+    if (messageAge > 120) {
+      console.log("Пропущено старое сообщение (защита от ретраев)");
+      return; 
+    }
+  }
+  await next(); // Передаем сообщение дальше
+});
+
 const mainKeyboard = {
     keyboard: [
         [{ text: "RAINFREE", web_app: { url: "https://rain-free.vercel.app" } }, { text: "TIRE PRESSURE", web_app: { url: "https://axs.sram.com/guides/tire/pressure" } }],
@@ -170,7 +187,14 @@ const mainKeyboard = {
     is_persistent: true
 };
 
-bot.command("start", (ctx) => ctx.reply("Спроси меня о правилах и манифесте, уточняй даты в календаре или проси выкачать GPX из Komoot. Также помогу с корректным давлением в шинах и найду сухие дороги для тебя.", { reply_markup: mainKeyboard }));
+// ==========================================
+// БЛОК 2: КОМАНДЫ (Обязательно ПЕРЕД нейросетью!)
+// ==========================================
+bot.command("start", (ctx) => ctx.reply("Привет! Я @gstrdnmc_bot. Спроси меня о турах, маршрутах или давлении в шинах! Напиши /help для списка команд.", { reply_markup: mainKeyboard }));
+
+bot.command("help", async (ctx) => {
+    await ctx.reply("Просто напишите мне ваш вопрос текстом, и я постараюсь помочь.\n\n📋 Доступные команды:\n/manifest - манифест комьюнити\n/rules - правила для райдов\n/calendar - календарь туров\n/rides - маршруты на выходные\n/gpx - скачать GPX из Komoot\n/pressure - давление в шинах\n/resto - карта ресторанов\n/komoot - коллекции маршрутов\n/rainfree - поиск сухих дорог");
+});
 
 bot.command("rides", async (ctx) => {
     try {
@@ -217,6 +241,8 @@ bot.command("rainfree", (ctx) => ctx.reply("Ищет <a href=\"https://rain-free
 bot.command("update_menu", async (ctx) => {
     try {
         const commands = [
+            { command: 'start', description: 'начать работу с ботом' },
+            { command: 'help', description: 'список команд' },
             { command: 'manifest', description: 'манифест комьюнити' },
             { command: 'rules', description: 'правила для райдов' },
             { command: 'calendar', description: 'календарь на сезон' },
@@ -283,6 +309,8 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.get("/api/update_commands", async (req, res) => {
     try {
         const commands = [
+            { command: 'start', description: 'начать работу с ботом' },
+            { command: 'help', description: 'список команд' },
             { command: 'manifest', description: 'манифест комьюнити' },
             { command: 'rules', description: 'правила для райдов' },
             { command: 'calendar', description: 'календарь на сезон' },
