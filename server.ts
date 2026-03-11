@@ -311,7 +311,7 @@ ${RULES_TEXT}
         // Используем официальную библиотеку GoogleGenerativeAI для надёжности
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash", // или "gemini-1.5-flash"
+            model: "gemini-1.5-flash", // Используем стабильную версию
         });
 
         // Для 2.0 Flash лучше передавать системную инструкцию прямо в generateContent, 
