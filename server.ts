@@ -324,7 +324,7 @@ ${RULES_TEXT}
                     { role: "user", content: ctx.message.text }
                 ],
                 model: "llama-3.1-8b-instant",
-                temperature: 0.2,
+                temperature: 0.3,
                 max_tokens: 300
             })
         });
@@ -396,7 +396,7 @@ app.post("/api/config", async (req, res) => {
     else res.status(400).json({ error: "API key required" });
 });
 
-app.get("/", (req, res) => res.send("GSTRDNMC BOT is running."));
+app.get("/", (req, res) => res.send("GSTRDNMC BOT is running"));
 
 if (process.env.NODE_ENV !== "production") {
     const PORT = process.env.PORT || 3000;
