@@ -203,19 +203,207 @@ bot.command("rides", async (ctx) => {
         const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
         if (!response.ok) throw new Error(`API error: ${response.status}`);
         const data: any = await response.json();
-        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) return ctx.reply("Пока нет заездов. Попробуйте позже.");
-        let message = "<b>Райды на выходных</b>\n\n";
-        for (const [date, info] of Object.entries(data.groupedByDate) as [string, any][]) {
-            const dateParts = (date as string).split('-');
+        
+        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) {
+            return ctx.reply("Пока нет заездов. Попробуйте позже.");
+        }
+        
+        // Проверяем количество дней - если только один день, сразу показываем маршруты
+        const dates = Object.keys(data.groupedByDate);
+        
+        if (dates.length === 1) {
+            // Только один день - показываем маршруты сразу
+            const dateKey = dates[0];
+            const dayInfo = data.groupedByDate[dateKey];
+            await showRidesForDay(ctx, dateKey, dayInfo);
+            return;
+        }
+        
+        // Несколько дней - показываем кнопки для выбора дня
+        const buttons = dates.map(date => {
+            const dayInfo = data.groupedByDate[date];
+            const dateParts = date.split('-');
             const d = dateParts[2];
             const m = dateParts[1];
-            message += `<b>${info.dayName} (${d}.${m})</b>\n`;
-            for (const ride of info.rides) {
-                message += `• ${ride.routeName}\n  ${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n  Погода: ${ride.weatherParams.temperature}º, ветер ${ride.weatherParams.wind}\n  <a href="${ride.gpxUrl}">Скачать GPX</a>\n\n`;
+            const label = `${dayInfo.dayName} (${d}.${m})`;
+            return [{ text: label, callback_data: `ride_day:${date}` }];
+        });
+        
+        await ctx.reply("Выбери день:", {
+            reply_markup: {
+                inline_keyboard: buttons
             }
+        });
+        
+    } catch (err) { 
+        console.error("[Rides error]:", err);
+        ctx.reply("Не удалось загрузить данные о заездах."); 
+    }
+});
+
+// Обработчик нажатий на кнопки выбора дня
+bot.callbackQuery(/^ride_day:(.+)$/, async (ctx) => {
+    const dateKey = ctx.match[1];
+    
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        const dayInfo = data.groupedByDate?.[dateKey];
+        if (!dayInfo) {
+            await ctx.answerCallbackQuery("Данные не найдены");
+            return;
         }
-        await ctx.reply(message, { parse_mode: "HTML", link_preview_options: { is_disabled: true } });
-    } catch (err) { ctx.reply("Не удалось загрузить данные о заездах."); }
+        
+        await showRidesForDay(ctx, dateKey, dayInfo);
+        await ctx.answerCallbackQuery();
+        
+    } catch (err) {
+        console.error("[Callback error]:", err);
+        await ctx.answerCallbackQuery("Ошибка загрузки данных");
+    }
+});
+
+// Функция показа маршрутов для конкретного дня
+async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
+    const rides = dayInfo.rides;
+    
+    if (!rides || rides.length === 0) {
+        await ctx.reply("Нет доступных маршрутов для этого дня.");
+        return;
+    }
+    
+    // Если только один маршрут - сразу показываем детали
+    if (rides.length === 1) {
+        const ride = rides[0];
+        const message = `<b>${ride.routeName}</b>\n\n` +
+            `📏 ${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n` +
+            `⏱️ Время: ${ride.routeParams.saddleTime}\n\n` +
+            `🌡️ ${ride.weatherParams.temperature}º\n` +
+            `💨 ${ride.weatherParams.wind}\n` +
+            `🌧️ ${ride.weatherParams.precipitation || 'Нет осадков'}\n` +
+            `☀️ ${ride.weatherParams.sunshine}\n\n` +
+            `📦 <a href="${ride.gpxUrl}">Скачать GPX</a>`;
+        
+        await ctx.reply(message, { 
+            parse_mode: "HTML", 
+            link_preview_options: { is_disabled: true },
+            reply_markup: {
+                inline_keyboard: [[{ text: "На главную", callback_data: "rides_main" }]]
+            }
+        });
+        return;
+    }
+    
+    // Несколько маршрутов - показываем кнопки
+    const buttons = rides.map(ride => [{
+        text: `${ride.routeName} (${ride.routeParams.distance}км)`,
+        callback_data: `ride_detail:${dateKey}:${rides.indexOf(ride)}`
+    }]);
+    
+    // Кнопка возврата на выбор дней
+    buttons.push([{ text: "← Назад к дням", callback_data: "rides_main" }]);
+    
+    await ctx.editMessageText(`<b>${dayInfo.dayName}</b>\nВыбери маршрут:`, {
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: buttons }
+    });
+}
+
+// Обработчик деталей маршрута
+bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
+    const [dateKey, rideIndex] = [ctx.match[1], parseInt(ctx.match[2])];
+    
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        const dayInfo = data.groupedByDate?.[dateKey];
+        const ride = dayInfo?.rides?.[rideIndex];
+        
+        if (!ride) {
+            await ctx.answerCallbackQuery("Маршрут не найден");
+            return;
+        }
+        
+        const message = `<b>${ride.routeName}</b>\n\n` +
+            `📏 <b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
+            `🏔️ <b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
+            `⏱️ <b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
+            `🌡️ <b>Температура:</b> ${ride.weatherParams.temperature}º\n` +
+            `💨 <b>Ветер:</b> ${ride.weatherParams.wind}\n` +
+            `🌬️ <b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
+            `🌧️ <b>Осадки:</b> ${ride.weatherParams.precipitation || 'Нет'}\n` +
+            `☀️ <b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
+            `🥤 <b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
+            ` Gel <b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
+            `📦 <a href="${ride.gpxUrl}">Скачать GPX</a>`;
+        
+        const buttons = [[{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]];
+        
+        try {
+            await ctx.editMessageText(message, { 
+                parse_mode: "HTML",
+                reply_markup: { inline_keyboard: buttons },
+                link_preview_options: { is_disabled: true }
+            });
+        } catch (e) {
+            // Если не удается редактировать (например, сообщение слишком старое) - отправляем новое
+            await ctx.reply(message, { 
+                parse_mode: "HTML",
+                reply_markup: { inline_keyboard: buttons },
+                link_preview_options: { is_disabled: true }
+            });
+        }
+        
+        await ctx.answerCallbackQuery();
+        
+    } catch (err) {
+        console.error("[Detail error]:", err);
+        await ctx.answerCallbackQuery("Ошибка");
+    }
+});
+
+// Возврат на главную страницу выбора дней
+bot.callbackQuery("rides_main", async (ctx) => {
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) {
+            await ctx.editMessageText("Пока нет заездов. Попробуйте позже.");
+            return;
+        }
+        
+        const dates = Object.keys(data.groupedByDate);
+        const buttons = dates.map(date => {
+            const dayInfo = data.groupedByDate[date];
+            const dateParts = date.split('-');
+            const d = dateParts[2];
+            const m = dateParts[1];
+            const label = `${dayInfo.dayName} (${d}.${m})`;
+            return [{ text: label, callback_data: `ride_day:${date}` }];
+        });
+        
+        await ctx.editMessageText("Выбери день:", {
+            reply_markup: { inline_keyboard: buttons }
+        });
+        
+        await ctx.answerCallbackQuery();
+        
+    } catch (err) {
+        console.error("[Main error]:", err);
+        await ctx.answerCallbackQuery("Ошибка");
+    }
 });
 
 bot.command("manifest", (ctx) => ctx.reply(MANIFEST_TEXT));
