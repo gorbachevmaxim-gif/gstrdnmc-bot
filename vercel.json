@@ -11,5 +11,11 @@
       "src": "/(.*)",
       "dest": "server.ts"
     }
-  ]
+  ],
+  "env": {
+    "GROQ_API_KEY": "@groq-api-key",
+    "TELEGRAM_BOT_TOKEN": "@telegram-bot-token",
+    "BOT_API_KEY": "@bot-api-key",
+    "RAIN_FREE_URL": "@rain-free-url"
+  }
 }

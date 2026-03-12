@@ -269,7 +269,8 @@ bot.on("message:text", async (ctx) => {
     console.log("[DEBUG] Получено сообщение от пользователя:", ctx.message.text);
     console.log("[DEBUG] GROQ_API_KEY exists:", !!process.env.GROQ_API_KEY, "length:", process.env.GROQ_API_KEY?.length);
     
-    const apiKey = process.env.GROQ_API_KEY;
+    const manualApiKey = await getSetting("groq_api_key");
+    const apiKey = process.env.GROQ_API_KEY || manualApiKey;
     console.log("[DEBUG] Выбранный apiKey:", apiKey ? apiKey.substring(0, 5) + "..." : "NULL");
     
     if (!apiKey) return ctx.reply("API ключ для AI не настроен. Напиши /start для инструкций.");
@@ -393,11 +394,11 @@ app.get("/api/update_commands", async (req, res) => {
     }
 });
 app.get("/api/config", async (req, res) => {
-    const key = await getSetting("gemini_api_key");
-    res.json({ hasKey: !!key || !!process.env.GEMINI_API_KEY, botTokenStatus: botToken ? "PRESENT" : "MISSING" });
+    const key = await getSetting("groq_api_key");
+    res.json({ hasKey: !!key || !!process.env.GROQ_API_KEY, botTokenStatus: botToken ? "PRESENT" : "MISSING" });
 });
 app.post("/api/config", async (req, res) => {
-    if (req.body.apiKey) { await saveSetting("gemini_api_key", req.body.apiKey); res.json({ status: "ok" }); }
+    if (req.body.apiKey) { await saveSetting("groq_api_key", req.body.apiKey); res.json({ status: "ok" }); }
     else res.status(400).json({ error: "API key required" });
 });
 
