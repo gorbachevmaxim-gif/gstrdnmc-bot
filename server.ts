@@ -313,7 +313,7 @@ ${RULES_TEXT}
                 { role: "system", content: systemPrompt },
                 { role: "user", content: ctx.message.text }
             ],
-            model: "llama-3.1-70b-versatile", // Бесплатная модель
+            model: "mixtral-8x7b-32768", // Бесплатная модель
             temperature: 0.2,
             max_tokens: 300,
         });
