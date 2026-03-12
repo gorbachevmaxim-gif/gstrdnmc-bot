@@ -205,7 +205,7 @@ bot.command("rides", async (ctx) => {
         const data: any = await response.json();
         
         if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) {
-            return ctx.reply("Пока нет заездов. Попробуйте позже.");
+            return ctx.reply("Нет подходящих маршрутов под такую погоду. Повтори проверку через 4-8 часов.");
         }
         
         // Проверяем количество дней - если только один день, сразу показываем маршруты
@@ -237,7 +237,7 @@ bot.command("rides", async (ctx) => {
         
     } catch (err) { 
         console.error("[Rides error]:", err);
-        ctx.reply("Не удалось загрузить данные о заездах."); 
+        ctx.reply("Не удалось загрузить данные о райдах."); 
     }
 });
 
@@ -380,7 +380,7 @@ bot.callbackQuery("rides_main", async (ctx) => {
         const data: any = await response.json();
         
         if (!data.groupedByDate || Object.keys(data.groupedByDate).length === 0) {
-            await ctx.editMessageText("Пока нет заездов. Попробуйте позже.");
+            await ctx.editMessageText("Пока нет подходящих маршрутов. Попробуй позже.");
             return;
         }
         
