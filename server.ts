@@ -335,7 +335,7 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
         const message = `<b>${ride.routeName}</b>\n\n` +
             `<b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
             `<b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
-            `⏱<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
+            `<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
             `<b>Температура:</b> ${ride.weatherParams.temperature}º\n` +
             `<b>Ветер:</b> ${ride.weatherParams.wind}\n` +
             `<b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
