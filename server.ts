@@ -316,7 +316,7 @@ ${RULES_TEXT}
                     { role: "system", content: systemPrompt },
                     { role: "user", content: ctx.message.text }
                 ],
-                model: "mixtral-8x7b-32768",
+                model: "llama-3.1-8b-instant",
                 temperature: 0.2,
                 max_tokens: 300
             })
