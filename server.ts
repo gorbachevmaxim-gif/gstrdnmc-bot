@@ -322,6 +322,11 @@ ${RULES_TEXT}
             })
         });
         
+        // Rate limit - показываем понятное сообщение
+        if (response.status === 429) {
+            return ctx.reply("Лимит запросов временно исчерпан. Подожди минуту и попробуй ещё раз.");
+        }
+        
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`API error ${response.status}: ${errorText}`);
