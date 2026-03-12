@@ -1,6 +1,5 @@
 import express from "express";
 import { Bot, webhookCallback, InputFile } from "grammy";
-import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import Redis from "ioredis";
 import fs from "fs";
@@ -305,20 +304,31 @@ ${RULES_TEXT}
         // Лог для отладки: проверим, что ключ реально доходит
         console.log("Использую ключ (начало):", apiKey.substring(0, 5));
 
-        // Используем Groq SDK
-        const groq = new Groq({ apiKey: apiKey });
-        
-        const chatCompletion = await groq.chat.completions.create({
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: ctx.message.text }
-            ],
-            model: "mixtral-8x7b-32768", // Бесплатная модель
-            temperature: 0.2,
-            max_tokens: 300,
+        // Используем fetch для Groq API
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: ctx.message.text }
+                ],
+                model: "mixtral-8x7b-32768",
+                temperature: 0.2,
+                max_tokens: 300
+            })
         });
         
-        const aiText = chatCompletion.choices[0]?.message?.content;
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API error ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        const aiText = data.choices?.[0]?.message?.content;
         
         if (!aiText || aiText.length === 0) {
             return ctx.reply("Не удалось получить ответ. Попробуй ещё раз.");
