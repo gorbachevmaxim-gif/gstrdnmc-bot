@@ -280,13 +280,13 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
     if (rides.length === 1) {
         const ride = rides[0];
         const message = `<b>${ride.routeName}</b>\n\n` +
-            `📏 ${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n` +
-            `⏱️ Время: ${ride.routeParams.saddleTime}\n\n` +
-            `🌡️ ${ride.weatherParams.temperature}º\n` +
-            `💨 ${ride.weatherParams.wind}\n` +
-            `🌧️ ${ride.weatherParams.precipitation || 'Нет осадков'}\n` +
-            `☀️ ${ride.weatherParams.sunshine}\n\n` +
-            `📦 <a href="${ride.gpxUrl}">Скачать GPX</a>`;
+            `${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n` +
+            `Время: ${ride.routeParams.saddleTime}\n\n` +
+            `${ride.weatherParams.temperature}º\n` +
+            `${ride.weatherParams.wind}\n` +
+            `${ride.weatherParams.precipitation || 'Нет осадков'}\n` +
+            `${ride.weatherParams.sunshine}\n\n` +
+            `<a href="${ride.gpxUrl}">Скачать GPX</a>`;
         
         await ctx.reply(message, { 
             parse_mode: "HTML", 
@@ -333,17 +333,17 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
         }
         
         const message = `<b>${ride.routeName}</b>\n\n` +
-            `📏 <b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
-            `🏔️ <b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
-            `⏱️ <b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
-            `🌡️ <b>Температура:</b> ${ride.weatherParams.temperature}º\n` +
-            `💨 <b>Ветер:</b> ${ride.weatherParams.wind}\n` +
-            `🌬️ <b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
-            `🌧️ <b>Осадки:</b> ${ride.weatherParams.precipitation || 'Нет'}\n` +
-            `☀️ <b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
-            `🥤 <b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
-            ` Gel <b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
-            `📦 <a href="${ride.gpxUrl}">Скачать GPX</a>`;
+            `<b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
+            `<b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
+            `⏱<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
+            `<b>Температура:</b> ${ride.weatherParams.temperature}º\n` +
+            `<b>Ветер:</b> ${ride.weatherParams.wind}\n` +
+            `<b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
+            `<b>Осадки:</b> ${ride.weatherParams.precipitation || 'Нет'}\n` +
+            `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
+            `<b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
+            `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
+            `<a href="${ride.gpxUrl}">Скачать GPX</a>`;
         
         const buttons = [[{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]];
         
