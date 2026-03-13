@@ -558,7 +558,7 @@ ${RULES_TEXT}
             return ctx.reply("Не удалось получить ответ. Попробуй ещё раз.");
         }
         
-        await ctx.reply(aiText);
+        await ctx.reply(aiText, { parse_mode: "Markdown" });
     } catch (e: any) { 
         console.error("[AI Error]:", e);
         const errorMsg = e?.message || e?.toString() || "Unknown error";
