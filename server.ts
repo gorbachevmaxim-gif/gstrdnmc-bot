@@ -15,6 +15,9 @@ dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
 console.log("[INIT] Загрузка env: GROQ_API_KEY =", process.env.GROQ_API_KEY ? "ЕСТЬ" : "НЕТ");
+console.log("[INIT] Загрузка env: TELEGRAM_BOT_TOKEN =", process.env.TELEGRAM_BOT_TOKEN ? "ЕСТЬ" : "НЕТ");
+console.log("[INIT] Загрузка env: VERCEL_URL =", process.env.VERCEL_URL ? "ЕСТЬ" : "НЕТ");
+console.log("[INIT] Загрузка env: WEBHOOK_URL =", process.env.WEBHOOK_URL ? "ЕСТЬ" : "НЕТ");
 
 // Database setup
 const redisUrl = process.env.REDIS_URL || '';
@@ -169,19 +172,26 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function setupWebhook(retries = 3, delay = 2000) {
+    console.log("[WEBHOOK] Начало установки webhook...");
+    
     const webhookUrl = process.env.VERCEL_URL 
         ? `https://${process.env.VERCEL_URL}/api/webhook`
         : process.env.WEBHOOK_URL;
 
     if (!webhookUrl) {
-        console.log("[WEBHOOK] VERCEL_URL не найден, пропускаем установку webhook");
+        console.log("[WEBHOOK] ⚠️ VERCEL_URL не найден, пропускаем установку webhook");
         return;
     }
+    
+    console.log(`[WEBHOOK] Целевой URL: ${webhookUrl}`);
 
     if (!botToken || botToken === "000000000:mock_token") {
-        console.log("[WEBHOOK] TELEGRAM_BOT_TOKEN не настроен");
+        console.log("[WEBHOOK] ❌ TELEGRAM_BOT_TOKEN не настроен или используется моковый токен!");
+        console.log("[WEBHOOK] ℹ️ Для работы webhook добавь TELEGRAM_BOT_TOKEN в настройках Vercel");
         return;
     }
+    
+    console.log("[WEBHOOK] ✅ TELEGRAM_BOT_TOKEN обнаружен");
 
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
@@ -208,9 +218,16 @@ async function setupWebhook(retries = 3, delay = 2000) {
                                    errorMsg.includes('ENOTFOUND') || 
                                    errorMsg.includes('ETIMEDOUT') ||
                                    errorMsg.includes('network') ||
-                                   errorMsg.includes('fetch');
+                                   errorMsg.includes('fetch') ||
+                                   errorMsg.includes('getWebhookInfo');
             
             console.error(`[WEBHOOK] ❌ Попытка ${attempt} не удалась:`, errorMsg);
+            
+            // Если ошибка "Network request for 'getWebhookInfo' failed!" - это значит проблема с токеном
+            if (errorMsg.includes('getWebhookInfo') && errorMsg.includes('failed')) {
+                console.error("[WEBHOOK] ❌ Похоже на проблему с TELEGRAM_BOT_TOKEN (моковый токен или неверный токен)");
+                break;
+            }
             
             if (attempt < retries && isNetworkError) {
                 console.log(`[WEBHOOK] ⏳ Ожидание ${delay}ms перед повторной попыткой...`);
