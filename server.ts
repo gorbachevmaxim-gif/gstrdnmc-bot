@@ -567,7 +567,7 @@ bot.callbackQuery(/^open_gpx:(.+):(\d+)$/, async (ctx) => {
         const gpxContent = await gpxResponse.text();
         
         // Формируем имя файла из названия маршрута
-        const fileName = `${ride.routeName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.gpx`;
+        const fileName = `${ride.routeName.replace(/[^a-zA-Z0-9]/g, '_')}.gpx`;
         
         // Отправляем файл пользователю
         await ctx.replyWithDocument(new InputFile(Buffer.from(gpxContent), fileName));
@@ -609,7 +609,7 @@ bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
         const gpxContent = await gpxResponse.text();
         
         // Формируем имя файла и подпись для пересылки друзьям
-        const fileName = `${ride.routeName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.gpx`;
+        const fileName = `${ride.routeName.replace(/[^a-zA-Z0-9]/g, '_')}.gpx`;
         
         // Формируем подпись с информацией о маршруте
         const shareCaption = `${ride.routeName}
