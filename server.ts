@@ -193,7 +193,7 @@ const mainKeyboard = {
 bot.command("start", (ctx) => ctx.reply("Привет! Я @gstrdnmc_bot. Спроси меня о турах, маршрутах или давлении в шинах! Напиши /help для списка команд.", { reply_markup: mainKeyboard }));
 
 bot.command("help", async (ctx) => {
-    await ctx.reply("Просто напиши мне вопрос текстом, и я постараюсь помочь.\n\nДоступные команды:\n/manifest - манифест комьюнити\n/rules - правила для райдов\n/calendar - календарь туров\n/rides - маршруты на выходные\n/gpx - скачать GPX из Komoot\n/pressure - давление в шинах\n/resto - карта ресторанов\n/komoot - коллекции маршрутов\n/rainfree - поиск сухих дорог");
+    await ctx.reply("Просто напиши мне вопрос текстом, и я постараюсь помочь.\n\nДоступные команды:\n/manifest - манифест комьюнити\n/rules - правила для райдов\n/calendar - календарь туров\n/rides - маршруты на выходные\n/download_gpx - скачать GPX файлы\n/gpx - скачать GPX из Komoot\n/pressure - давление в шинах\n/resto - карта ресторанов\n/komoot - коллекции маршрутов\n/rainfree - поиск сухих дорог");
 });
 
 bot.command("rides", async (ctx) => {
@@ -303,7 +303,6 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
             link_preview_options: { is_disabled: true },
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "Открыть GPX", callback_data: `open_gpx:${dateKey}:0` }],
                     [{ text: "На главную", callback_data: "rides_main" }]
                 ]
             }
@@ -359,7 +358,6 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             `<a href="${ride.gpxUrl}">Скачать GPX</a>`;
         
         const buttons = [
-            [{ text: "Открыть GPX", callback_data: `open_gpx:${dateKey}:${rideIndex}` }],
             [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
         ];
         
@@ -477,6 +475,100 @@ bot.command("gpx", async (ctx) => {
     const result = await convertKomootToGpx(url);
     if (result) await ctx.replyWithDocument(new InputFile(Buffer.from(result.content), result.filename));
     else ctx.reply("Не удалось конвертировать.");
+});
+
+// Команда для скачивания GPX файлов из доступных маршрутов
+bot.command("download_gpx", async (ctx) => {
+    await ctx.reply("Загружаю доступные маршруты...");
+    
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        // Собираем все GPX файлы из всех дней
+        const allRides: { dateKey: string, rideIndex: number, routeName: string, gpxUrl: string }[] = [];
+        
+        if (data.groupedByDate) {
+            for (const dateKey of Object.keys(data.groupedByDate)) {
+                const dayInfo = data.groupedByDate[dateKey];
+                if (dayInfo.rides) {
+                    dayInfo.rides.forEach((ride: any, index: number) => {
+                        if (ride.gpxUrl) {
+                            allRides.push({
+                                dateKey,
+                                rideIndex: index,
+                                routeName: ride.routeName,
+                                gpxUrl: ride.gpxUrl
+                            });
+                        }
+                    });
+                }
+            }
+        }
+        
+        if (allRides.length === 0) {
+            return ctx.reply("Нет доступных маршрутов с GPX файлами. Попробуй /rides чтобы найти маршруты.");
+        }
+        
+        // Показываем кнопки для скачивания GPX
+        const buttons = allRides.map(ride => [{
+            text: ride.routeName,
+            callback_data: `download_gpx:${ride.dateKey}:${ride.rideIndex}`
+        }]);
+        
+        await ctx.reply(`Доступно ${allRides.length} GPX файлов. Выбери маршрут:`, {
+            reply_markup: { inline_keyboard: buttons }
+        });
+        
+    } catch (err) {
+        console.error("[Download GPX error]:", err);
+        ctx.reply("Не удалось загрузить список GPX.");
+    }
+});
+
+// Обработчик скачивания GPX по кнопке
+bot.callbackQuery(/^download_gpx:(.+):(\d+)$/, async (ctx) => {
+    const [dateKey, rideIndex] = [ctx.match[1], parseInt(ctx.match[2])];
+    
+    await ctx.answerCallbackQuery("Загружаю GPX...");
+    
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        const dayInfo = data.groupedByDate?.[dateKey];
+        const ride = dayInfo?.rides?.[rideIndex];
+        
+        if (!ride || !ride.gpxUrl) {
+            await ctx.answerCallbackQuery("GPX не найден");
+            return;
+        }
+        
+        // Скачиваем GPX файл
+        const gpxResponse = await fetch(ride.gpxUrl);
+        if (!gpxResponse.ok) {
+            await ctx.answerCallbackQuery("Не удалось скачать GPX");
+            return;
+        }
+        
+        const gpxContent = await gpxResponse.text();
+        
+        // Формируем имя файла из названия маршрута
+        const fileName = `${ride.routeName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.gpx`;
+        
+        // Отправляем файл пользователю
+        await ctx.replyWithDocument(new InputFile(Buffer.from(gpxContent), fileName));
+        
+    } catch (err) {
+        console.error("[Download GPX callback error]:", err);
+        await ctx.answerCallbackQuery("Ошибка при загрузке GPX");
+    }
 });
 
 bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">Калькулятор</a> точного давления для твоих колес", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
