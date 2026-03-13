@@ -162,7 +162,32 @@ async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string
 }
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+// Создаем бота
 const bot = new Bot(botToken || "000000000:mock_token");
+
+// ==========================================
+// HELPER: Прямой fetch к Telegram API (для Vercel)
+// ==========================================
+async function telegramApiCall(method: string, body: any): Promise<any> {
+    if (!botToken || botToken === "000000000:mock_token") {
+        throw new Error("TELEGRAM_BOT_TOKEN не настроен");
+    }
+    
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+    });
+    
+    const data = await response.json();
+    if (!data.ok) {
+        throw new Error(`Telegram API error: ${data.description}`);
+    }
+    return data.result;
+}
 
 // ==========================================
 // БЛОК 0: АВТОМАТИЧЕСКАЯ УСТАНОВКА WEBHOOK (Vercel)
@@ -197,16 +222,16 @@ async function setupWebhook(retries = 3, delay = 2000) {
         try {
             console.log(`[WEBHOOK] Попытка ${attempt}/${retries}...`);
             
-            // Проверяем текущий webhook
-            const currentWebhook = await bot.api.getWebhookInfo();
+            // Проверяем текущий webhook через прямой fetch
+            const currentWebhook = await telegramApiCall("getWebhookInfo", {});
             console.log(`[WEBHOOK] Текущий webhook: ${currentWebhook.url || 'не установлен'}`);
             
-            // Устанавливаем новый webhook
-            await bot.api.setWebhook(webhookUrl);
+            // Устанавливаем новый webhook через прямой fetch
+            await telegramApiCall("setWebhook", { url: webhookUrl });
             console.log(`[WEBHOOK] ✅ Установлен: ${webhookUrl}`);
             
             // Проверяем результат
-            const newWebhook = await bot.api.getWebhookInfo();
+            const newWebhook = await telegramApiCall("getWebhookInfo", {});
             console.log(`[WEBHOOK] Подтверждено: ${newWebhook.url}`);
             
             // Успех - выходим из функции
