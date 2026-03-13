@@ -164,7 +164,11 @@ const bot = new Bot(botToken || "000000000:mock_token");
 // ==========================================
 // БЛОК 0: АВТОМАТИЧЕСКАЯ УСТАНОВКА WEBHOOK (Vercel)
 // ==========================================
-async function setupWebhook() {
+async function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function setupWebhook(retries = 3, delay = 2000) {
     const webhookUrl = process.env.VERCEL_URL 
         ? `https://${process.env.VERCEL_URL}/api/webhook`
         : process.env.WEBHOOK_URL;
@@ -179,26 +183,55 @@ async function setupWebhook() {
         return;
     }
 
-    try {
-        // Проверяем текущий webhook
-        const currentWebhook = await bot.api.getWebhookInfo();
-        console.log(`[WEBHOOK] Текущий webhook: ${currentWebhook.url || 'не установлен'}`);
-        
-        // Устанавливаем новый webhook
-        await bot.api.setWebhook(webhookUrl);
-        console.log(`[WEBHOOK] ✅ Установлен: ${webhookUrl}`);
-        
-        // Проверяем результат
-        const newWebhook = await bot.api.getWebhookInfo();
-        console.log(`[WEBHOOK] Подтверждено: ${newWebhook.url}`);
-    } catch (error) {
-        console.error("[WEBHOOK] ❌ Ошибка установки:", error);
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            console.log(`[WEBHOOK] Попытка ${attempt}/${retries}...`);
+            
+            // Проверяем текущий webhook
+            const currentWebhook = await bot.api.getWebhookInfo();
+            console.log(`[WEBHOOK] Текущий webhook: ${currentWebhook.url || 'не установлен'}`);
+            
+            // Устанавливаем новый webhook
+            await bot.api.setWebhook(webhookUrl);
+            console.log(`[WEBHOOK] ✅ Установлен: ${webhookUrl}`);
+            
+            // Проверяем результат
+            const newWebhook = await bot.api.getWebhookInfo();
+            console.log(`[WEBHOOK] Подтверждено: ${newWebhook.url}`);
+            
+            // Успех - выходим из функции
+            return;
+            
+        } catch (error: any) {
+            const errorMsg = error?.message || error?.toString() || 'Unknown error';
+            const isNetworkError = errorMsg.includes('ECONNRESET') || 
+                                   errorMsg.includes('ENOTFOUND') || 
+                                   errorMsg.includes('ETIMEDOUT') ||
+                                   errorMsg.includes('network') ||
+                                   errorMsg.includes('fetch');
+            
+            console.error(`[WEBHOOK] ❌ Попытка ${attempt} не удалась:`, errorMsg);
+            
+            if (attempt < retries && isNetworkError) {
+                console.log(`[WEBHOOK] ⏳ Ожидание ${delay}ms перед повторной попыткой...`);
+                await sleep(delay);
+                // Увеличиваем задержку для следующей попытки (exponential backoff)
+                delay *= 2;
+            } else if (!isNetworkError) {
+                // Не сетевая ошибка - не имеет смысла повторять
+                console.error("[WEBHOOK] ❌ Несетевая ошибка, прекращаем попытки");
+                break;
+            }
+        }
     }
+    
+    console.error("[WEBHOOK] ❌ Не удалось установить webhook после всех попыток");
 }
 
 // Запускаем webhook в продакшене
 if (process.env.NODE_ENV === "production") {
-    setupWebhook();
+    // Не ждем результата - запускаем асинхронно
+    setupWebhook().catch(err => console.error("[WEBHOOK] Критическая ошибка:", err));
 }
 
 // ==========================================
