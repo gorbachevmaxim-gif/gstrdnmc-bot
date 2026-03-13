@@ -167,7 +167,6 @@ async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string
     } catch (e) { return null; }
 }
 
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
 // Создаем бота
 
