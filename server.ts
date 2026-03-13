@@ -249,6 +249,24 @@ async function setupWebhookManual(): Promise<{ success: boolean; message: string
     }
 }
 
+// Эндпоинт для удаления webhook (сброс кеша Telegram)
+app.post("/api/delete-webhook", async (req, res) => {
+    if (!botToken || botToken === "000000000:mock_token") {
+        return res.status(400).json({ error: "TELEGRAM_BOT_TOKEN не настроен" });
+    }
+    
+    try {
+        console.log("[WEBHOOK] Удаление webhook...");
+        await telegramApiCall("deleteWebhook", { });
+        console.log("[WEBHOOK] ✅ Webhook удален");
+        res.json({ success: true, message: "Webhook удален. Теперь нужно установить новый через /api/setup-webhook" });
+    } catch (error: any) {
+        const errorMsg = error?.message || error?.toString() || "Unknown error";
+        console.error("[WEBHOOK] Ошибка удаления:", errorMsg);
+        res.status(500).json({ error: errorMsg });
+    }
+});
+
 // Эндпоинт для ручной установки webhook
 app.post("/api/setup-webhook", async (req, res) => {
     const result = await setupWebhookManual();
