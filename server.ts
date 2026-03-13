@@ -276,6 +276,16 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
         return;
     }
     
+    // Форматируем дату для отображения (день недели + дата)
+    const dateParts = dateKey.split('-');
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1;
+    const day = parseInt(dateParts[2]);
+    const dateObj = new Date(year, month, day);
+    
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const formattedDate = `${day} ${months[month]}`;
+    
     // Если только один маршрут - сразу показываем детали
     if (rides.length === 1) {
         const ride = rides[0];
@@ -307,7 +317,7 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
     // Кнопка возврата на выбор дней
     buttons.push([{ text: "← Назад к дням", callback_data: "rides_main" }]);
     
-    await ctx.editMessageText(`<b>${dayInfo.dayName}</b>\nВыбери маршрут:`, {
+    await ctx.editMessageText(`<b>${dayInfo.dayName}, ${formattedDate}</b>\nВыбери маршрут:`, {
         parse_mode: "HTML",
         reply_markup: { inline_keyboard: buttons }
     });
@@ -434,7 +444,7 @@ bot.command("update_menu", async (ctx) => {
             { command: 'manifest', description: 'манифест комьюнити' },
             { command: 'rules', description: 'правила для райдов' },
             { command: 'calendar', description: 'календарь на сезон' },
-            { command: 'rides', description: 'подборка маршрутов на выходные' },
+            { command: 'rides', description: 'маршруты на выходные' },
             { command: 'gpx', description: 'обход ограничений Komoot' },
             { command: 'pressure', description: 'давление в шинах' },
             { command: 'resto', description: 'карта ресторанов' },
@@ -566,7 +576,7 @@ app.get("/api/update_commands", async (req, res) => {
             { command: 'manifest', description: 'манифест комьюнити' },
             { command: 'rules', description: 'правила для райдов' },
             { command: 'calendar', description: 'календарь на сезон' },
-            { command: 'rides', description: 'подборка маршрутов на выходные' },
+            { command: 'rides', description: 'маршруты на выходные' },
             { command: 'gpx', description: 'обход ограничений Komoot' },
             { command: 'pressure', description: 'давление в шинах' },
             { command: 'resto', description: 'карта ресторанов' },
