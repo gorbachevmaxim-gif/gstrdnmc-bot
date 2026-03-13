@@ -166,115 +166,94 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN;
 // Создаем бота
 const bot = new Bot(botToken || "000000000:mock_token");
 
+// Express app - объявляем здесь, чтобы использовать во всех функциях
+const app = express();
+app.use(express.json());
+
 // ==========================================
-// HELPER: Прямой fetch к Telegram API (для Vercel)
+// HELPER: Прямой fetch к Telegram API (для Vercel) с таймаутом
 // ==========================================
-async function telegramApiCall(method: string, body: any): Promise<any> {
+async function telegramApiCall(method: string, body: any, timeoutMs = 10000): Promise<any> {
     if (!botToken || botToken === "000000000:mock_token") {
         throw new Error("TELEGRAM_BOT_TOKEN не настроен");
     }
     
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
-    const data = await response.json();
-    if (!data.ok) {
-        throw new Error(`Telegram API error: ${data.description}`);
+    try {
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        if (!data.ok) {
+            throw new Error(`Telegram API error: ${data.description}`);
+        }
+        return data.result;
+    } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error(`Telegram API timeout after ${timeoutMs}ms`);
+        }
+        throw error;
     }
-    return data.result;
 }
 
 // ==========================================
-// БЛОК 0: АВТОМАТИЧЕСКАЯ УСТАНОВКА WEBHOOK (Vercel)
+// БЛОК 0: РУЧНАЯ УСТАНОВКА WEBHOOK ЧЕРЗ API
 // ==========================================
-async function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function setupWebhook(retries = 3, delay = 2000) {
-    console.log("[WEBHOOK] Начало установки webhook...");
-    
+// Убрали автоматическую установку webhook при старте - 
+// Vercel имеет ограничения сети, лучше устанавливать вручную
+async function setupWebhookManual(): Promise<{ success: boolean; message: string }> {
     const webhookUrl = process.env.VERCEL_URL 
         ? `https://${process.env.VERCEL_URL}/api/webhook`
         : process.env.WEBHOOK_URL;
 
     if (!webhookUrl) {
-        console.log("[WEBHOOK] ⚠️ VERCEL_URL не найден, пропускаем установку webhook");
-        return;
+        return { success: false, message: "VERCEL_URL не найден" };
     }
-    
-    console.log(`[WEBHOOK] Целевой URL: ${webhookUrl}`);
 
     if (!botToken || botToken === "000000000:mock_token") {
-        console.log("[WEBHOOK] ❌ TELEGRAM_BOT_TOKEN не настроен или используется моковый токен!");
-        console.log("[WEBHOOK] ℹ️ Для работы webhook добавь TELEGRAM_BOT_TOKEN в настройках Vercel");
-        return;
+        return { success: false, message: "TELEGRAM_BOT_TOKEN не настроен" };
     }
     
-    console.log("[WEBHOOK] ✅ TELEGRAM_BOT_TOKEN обнаружен");
-
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-            console.log(`[WEBHOOK] Попытка ${attempt}/${retries}...`);
-            
-            // Проверяем текущий webhook через прямой fetch
-            const currentWebhook = await telegramApiCall("getWebhookInfo", {});
-            console.log(`[WEBHOOK] Текущий webhook: ${currentWebhook.url || 'не установлен'}`);
-            
-            // Устанавливаем новый webhook через прямой fetch
-            await telegramApiCall("setWebhook", { url: webhookUrl });
-            console.log(`[WEBHOOK] ✅ Установлен: ${webhookUrl}`);
-            
-            // Проверяем результат
-            const newWebhook = await telegramApiCall("getWebhookInfo", {});
-            console.log(`[WEBHOOK] Подтверждено: ${newWebhook.url}`);
-            
-            // Успех - выходим из функции
-            return;
-            
-        } catch (error: any) {
-            const errorMsg = error?.message || error?.toString() || 'Unknown error';
-            const isNetworkError = errorMsg.includes('ECONNRESET') || 
-                                   errorMsg.includes('ENOTFOUND') || 
-                                   errorMsg.includes('ETIMEDOUT') ||
-                                   errorMsg.includes('network') ||
-                                   errorMsg.includes('fetch') ||
-                                   errorMsg.includes('getWebhookInfo');
-            
-            console.error(`[WEBHOOK] ❌ Попытка ${attempt} не удалась:`, errorMsg);
-            
-            // Если ошибка "Network request for 'getWebhookInfo' failed!" - это значит проблема с токеном
-            if (errorMsg.includes('getWebhookInfo') && errorMsg.includes('failed')) {
-                console.error("[WEBHOOK] ❌ Похоже на проблему с TELEGRAM_BOT_TOKEN (моковый токен или неверный токен)");
-                break;
-            }
-            
-            if (attempt < retries && isNetworkError) {
-                console.log(`[WEBHOOK] ⏳ Ожидание ${delay}ms перед повторной попыткой...`);
-                await sleep(delay);
-                // Увеличиваем задержку для следующей попытки (exponential backoff)
-                delay *= 2;
-            } else if (!isNetworkError) {
-                // Не сетевая ошибка - не имеет смысла повторять
-                console.error("[WEBHOOK] ❌ Несетевая ошибка, прекращаем попытки");
-                break;
-            }
-        }
+    try {
+        console.log("[WEBHOOK] Проверка текущего webhook...");
+        const currentWebhook = await telegramApiCall("getWebhookInfo", {});
+        console.log("[WEBHOOK] Текущий webhook:", currentWebhook.url || "не установлен");
+        
+        console.log("[WEBHOOK] Установка нового webhook...");
+        await telegramApiCall("setWebhook", { url: webhookUrl });
+        console.log("[WEBHOOK] ✅ Установлен:", webhookUrl);
+        
+        const newWebhook = await telegramApiCall("getWebhookInfo", {});
+        console.log("[WEBHOOK] Подтверждено:", newWebhook.url);
+        
+        return { success: true, message: `Webhook установлен: ${webhookUrl}` };
+    } catch (error: any) {
+        const errorMsg = error?.message || error?.toString() || "Unknown error";
+        console.error("[WEBHOOK] Ошибка:", errorMsg);
+        return { success: false, message: errorMsg };
     }
-    
-    console.error("[WEBHOOK] ❌ Не удалось установить webhook после всех попыток");
 }
 
-// Запускаем webhook в продакшене
-if (process.env.NODE_ENV === "production") {
-    // Не ждем результата - запускаем асинхронно
-    setupWebhook().catch(err => console.error("[WEBHOOK] Критическая ошибка:", err));
-}
+// Эндпоинт для ручной установки webhook
+app.post("/api/setup-webhook", async (req, res) => {
+    const result = await setupWebhookManual();
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(400).json(result);
+    }
+});
 
 // ==========================================
 // БЛОК 1: ЗАЩИТА ОТ СПАМА И ПОВТОРОВ (Middleware)
@@ -781,9 +760,6 @@ ${RULES_TEXT}
         ctx.reply(`Ошибка AI: ${errorMsg.substring(0, 200)}`); 
     }
 });
-
-const app = express();
-app.use(express.json());
 
 // Main webhook handler
 if (process.env.NODE_ENV === "production") {
