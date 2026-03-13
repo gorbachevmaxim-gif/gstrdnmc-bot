@@ -19,6 +19,12 @@ console.log("[INIT] Загрузка env: TELEGRAM_BOT_TOKEN =", process.env.TEL
 console.log("[INIT] Загрузка env: VERCEL_URL =", process.env.VERCEL_URL ? "ЕСТЬ" : "НЕТ");
 console.log("[INIT] Загрузка env: WEBHOOK_URL =", process.env.WEBHOOK_URL ? "ЕСТЬ" : "НЕТ");
 
+// Telegram Bot Token - после загрузки env!
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+// Создаем бота ПОСЛЕ загрузки env
+const bot = new Bot(botToken || "000000000:mock_token");
+
 // Database setup
 const redisUrl = process.env.REDIS_URL || '';
 let redis: Redis | null = null;
@@ -164,7 +170,6 @@ async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
 // Создаем бота
-const bot = new Bot(botToken || "000000000:mock_token");
 
 // Express app - объявляем здесь, чтобы использовать во всех функциях
 const app = express();
