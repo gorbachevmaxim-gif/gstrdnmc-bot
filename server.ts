@@ -303,7 +303,7 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
             link_preview_options: { is_disabled: true },
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "📱 Открыть GPX", callback_data: `open_gpx:${dateKey}:0` }],
+                    [{ text: "Открыть GPX", callback_data: `open_gpx:${dateKey}:0` }],
                     [{ text: "На главную", callback_data: "rides_main" }]
                 ]
             }
