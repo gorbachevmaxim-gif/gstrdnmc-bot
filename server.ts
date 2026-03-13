@@ -628,10 +628,10 @@ bot.command("gpx", async (ctx) => {
     else ctx.reply("Не удалось конвертировать.");
 });
 
-bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">Калькулятор</a> точного давления для твоих колес", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
-bot.command("resto", (ctx) => ctx.reply("Места на <a href=\"https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=\">Яндекс Картах</a>: рестораны и кафе для старта и финиша райда во множестве городов, где мы были или обязательно будем", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
-bot.command("komoot", (ctx) => ctx.reply("<a href=\"https://www.komoot.com/user/1622023059217/collections\">Коллекции</a> маршрутов Гастродинамики", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
-bot.command("rainfree", (ctx) => ctx.reply("Ищет <a href=\"https://rain-free.vercel.app\">сухие дороги</a> для тебя", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("pressure", (ctx) => ctx.reply("<a href=\"https://axs.sram.com/guides/tire/pressure\">Калькулятор</a> оптимального давления — это твой накат, зацеп и безопасность. Чтобы не гадать, введи: свой вес и байка, ширину покрышки и обода. Калькулятор выдаст точные цифры для настройки колес.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("resto", (ctx) => ctx.reply("Места на <a href=\"https://yandex.com/maps/213/moscow/?bookmarks%5BpublicId%5D=OfCmg0o9&ll=37.569611%2C55.726974&mode=bookmarks&utm_campaign=bookmarks&utm_source=share&z=\">Яндекс Картах</a> — рестораны и кафе для старта и финиша райда во множестве городов, где мы были или обязательно будем", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("komoot", (ctx) => ctx.reply("<a href=\"https://www.komoot.com/user/1622023059217/collections\">Коллекции</a> маршрутов Гастродинамики — библиотека наших дорог и смыслов. Здесь собраны подмосковные сокровища, рассветные 5AM и легендарные побеги от дождя La Belle Échappée. Ищи полные гиды по всем нашим гастротурам. Твой путь начинается здесь.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
+bot.command("rainfree", (ctx) => ctx.reply("Это твой план побега от станка и дивана. Это твой <a href=\"https://rain-free.vercel.app\">ключ к сухому асфальту</a> и свободе от погодных рамок. Это инструмент для тех, кто предпочитает ехать, когда остальные сдаются непогоде.", { parse_mode: "HTML", link_preview_options: { is_disabled: true } }));
 
 bot.command("update_menu", async (ctx) => {
     try {
