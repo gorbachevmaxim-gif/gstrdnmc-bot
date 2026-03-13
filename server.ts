@@ -162,6 +162,46 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new Bot(botToken || "000000000:mock_token");
 
 // ==========================================
+// БЛОК 0: АВТОМАТИЧЕСКАЯ УСТАНОВКА WEBHOOK (Vercel)
+// ==========================================
+async function setupWebhook() {
+    const webhookUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}/api/webhook`
+        : process.env.WEBHOOK_URL;
+
+    if (!webhookUrl) {
+        console.log("[WEBHOOK] VERCEL_URL не найден, пропускаем установку webhook");
+        return;
+    }
+
+    if (!botToken || botToken === "000000000:mock_token") {
+        console.log("[WEBHOOK] TELEGRAM_BOT_TOKEN не настроен");
+        return;
+    }
+
+    try {
+        // Проверяем текущий webhook
+        const currentWebhook = await bot.api.getWebhookInfo();
+        console.log(`[WEBHOOK] Текущий webhook: ${currentWebhook.url || 'не установлен'}`);
+        
+        // Устанавливаем новый webhook
+        await bot.api.setWebhook(webhookUrl);
+        console.log(`[WEBHOOK] ✅ Установлен: ${webhookUrl}`);
+        
+        // Проверяем результат
+        const newWebhook = await bot.api.getWebhookInfo();
+        console.log(`[WEBHOOK] Подтверждено: ${newWebhook.url}`);
+    } catch (error) {
+        console.error("[WEBHOOK] ❌ Ошибка установки:", error);
+    }
+}
+
+// Запускаем webhook в продакшене
+if (process.env.NODE_ENV === "production") {
+    setupWebhook();
+}
+
+// ==========================================
 // БЛОК 1: ЗАЩИТА ОТ СПАМА И ПОВТОРОВ (Middleware)
 // ==========================================
 bot.use(async (ctx, next) => {
