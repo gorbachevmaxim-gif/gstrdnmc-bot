@@ -302,7 +302,10 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
             parse_mode: "HTML", 
             link_preview_options: { is_disabled: true },
             reply_markup: {
-                inline_keyboard: [[{ text: "На главную", callback_data: "rides_main" }]]
+                inline_keyboard: [
+                    [{ text: "📱 Открыть GPX", callback_data: `open_gpx:${dateKey}:0` }],
+                    [{ text: "На главную", callback_data: "rides_main" }]
+                ]
             }
         });
         return;
@@ -355,7 +358,10 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
             `<a href="${ride.gpxUrl}">Скачать GPX</a>`;
         
-        const buttons = [[{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]];
+        const buttons = [
+            [{ text: "Открыть GPX", callback_data: `open_gpx:${dateKey}:${rideIndex}` }],
+            [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
+        ];
         
         try {
             await ctx.editMessageText(message, { 
@@ -416,11 +422,53 @@ bot.callbackQuery("rides_main", async (ctx) => {
     }
 });
 
+// Обработчик "Открыть GPX" - скачивает файл и отправляет как документ
+bot.callbackQuery(/^open_gpx:(.+):(\d+)$/, async (ctx) => {
+    const [dateKey, rideIndex] = [ctx.match[1], parseInt(ctx.match[2])];
+    
+    await ctx.answerCallbackQuery("Загружаю GPX...");
+    
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        const dayInfo = data.groupedByDate?.[dateKey];
+        const ride = dayInfo?.rides?.[rideIndex];
+        
+        if (!ride || !ride.gpxUrl) {
+            await ctx.answerCallbackQuery("GPX не найден");
+            return;
+        }
+        
+        // Скачиваем GPX файл
+        const gpxResponse = await fetch(ride.gpxUrl);
+        if (!gpxResponse.ok) {
+            await ctx.answerCallbackQuery("Не удалось скачать GPX");
+            return;
+        }
+        
+        const gpxContent = await gpxResponse.text();
+        
+        // Формируем имя файла из названия маршрута
+        const fileName = `${ride.routeName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.gpx`;
+        
+        // Отправляем файл пользователю
+        await ctx.replyWithDocument(new InputFile(Buffer.from(gpxContent), fileName));
+        
+    } catch (err) {
+        console.error("[Open GPX error]:", err);
+        await ctx.answerCallbackQuery("Ошибка при загрузке GPX");
+    }
+});
+
 bot.command("manifest", (ctx) => ctx.reply(MANIFEST_TEXT));
 bot.command("rules", (ctx) => ctx.reply(RULES_TEXT));
 bot.command("calendar", async (ctx) => {
     const text = TOURS.map(t => `<b>${t.name}</b>\n${t.displayDate}\n${t.details}`).join("\n\n");
-    await ctx.reply(`Календарь 2026\n\n${text}`, { parse_mode: "HTML" });
+    await ctx.reply(`Календарь туров\n\n${text}`, { parse_mode: "HTML" });
     await ctx.replyWithDocument(new InputFile(Buffer.from(generateFullIcs()), "calendar.ics"));
 });
 bot.command("gpx", async (ctx) => {
