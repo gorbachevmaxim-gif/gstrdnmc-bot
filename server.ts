@@ -302,7 +302,7 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
             link_preview_options: { is_disabled: true },
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "Скачать GPX", callback_data: `open_gpx:${dateKey}:0` }],
+                    [{ text: "Скачать GPX", callback_data: `open_gpx:${dateKey}:0` }, { text: "Поделиться", callback_data: `share_gpx:${dateKey}:0` }],
                     [{ text: "На главную", callback_data: "rides_main" }]
                 ]
             }
@@ -357,7 +357,7 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}`;
         
         const buttons = [
-            [{ text: "Скачать GPX", callback_data: `open_gpx:${dateKey}:${rideIndex}` }],
+            [{ text: "Скачать GPX", callback_data: `open_gpx:${dateKey}:${rideIndex}` }, { text: "Поделиться", callback_data: `share_gpx:${dateKey}:${rideIndex}` }],
             [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
         ];
         
@@ -458,6 +458,61 @@ bot.callbackQuery(/^open_gpx:(.+):(\d+)$/, async (ctx) => {
         
     } catch (err) {
         console.error("[Open GPX error]:", err);
+        await ctx.answerCallbackQuery("Ошибка при загрузке GPX");
+    }
+});
+
+// Обработчик "Поделиться GPX" - отправляет файл с подписью для пересылки друзьям
+bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
+    const [dateKey, rideIndex] = [ctx.match[1], parseInt(ctx.match[2])];
+    
+    await ctx.answerCallbackQuery("Подготавливаю GPX...");
+    
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        const dayInfo = data.groupedByDate?.[dateKey];
+        const ride = dayInfo?.rides?.[rideIndex];
+        
+        if (!ride || !ride.gpxUrl) {
+            await ctx.answerCallbackQuery("GPX не найден");
+            return;
+        }
+        
+        // Скачиваем GPX файл
+        const gpxResponse = await fetch(ride.gpxUrl);
+        if (!gpxResponse.ok) {
+            await ctx.answerCallbackQuery("Не удалось скачать GPX");
+            return;
+        }
+        
+        const gpxContent = await gpxResponse.text();
+        
+        // Формируем имя файла и подпись для пересылки друзьям
+        const fileName = `${ride.routeName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.gpx`;
+        
+        // Формируем подпись с информацией о маршруте
+        const shareCaption = `${ride.routeName}
+
+${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м
+${ride.routeParams.saddleTime}
+
+${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}
+
+GPX-файл для навигатора`;
+        
+        // Отправляем файл с подписью для удобной пересылки
+        await ctx.replyWithDocument(
+            new InputFile(Buffer.from(gpxContent), fileName),
+            { caption: shareCaption, parse_mode: "HTML" }
+        );
+        
+    } catch (err) {
+        console.error("[Share GPX error]:", err);
         await ctx.answerCallbackQuery("Ошибка при загрузке GPX");
     }
 });
