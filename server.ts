@@ -596,9 +596,7 @@ bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
         // Формируем подпись с информацией о маршруте
         const shareCaption = `${ride.routeName}
 
-${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м
-${ride.routeParams.saddleTime}
-
+${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м | ${ride.routeParams.saddleTime}
 ${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}
 
 GPX-файл для навигатора`;
