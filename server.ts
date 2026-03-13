@@ -350,7 +350,7 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             `<b>Ветер:</b> ${ride.weatherParams.wind}\n` +
             `<b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
             `<b>Осадки:</b> ${ride.weatherParams.precipitation || 'Нет'}\n` +
-            `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
+            `<b>Солнце (09:00–18:00):</b> ${ride.weatherParams.sunshine}\n\n` +
             `<b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
             `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
             `<a href="${ride.gpxUrl}">Скачать GPX</a>`;
