@@ -600,7 +600,7 @@ bot.callbackQuery(/^open_gpx:(.+):(\d+)$/, async (ctx) => {
         const gpxContent = await gpxResponse.text();
         
         // Формируем имя файла из названия маршрута (транслитерация кириллицы)
-        const fileName = `${ride.gpxFilename || ride.routeName}.gpx`;
+        const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
         
         // Отправляем файл пользователю
         await ctx.replyWithDocument(new InputFile(Buffer.from(gpxContent), fileName));
@@ -642,7 +642,7 @@ bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
         const gpxContent = await gpxResponse.text();
         
         // Формируем имя файла и подпись для пересылки друзьям (транслитерация кириллицы)
-        const fileName = `${ride.gpxFilename || ride.routeName}.gpx`;
+        const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
         
         // Формируем подпись с информацией о маршруте
         const shareCaption = `${ride.routeName}
