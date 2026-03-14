@@ -10,6 +10,32 @@ import path from "path";
 // а генерация ответа от AI может занимать 5-12 секунд
 export const maxDuration = 60;
 
+// Функция транслитерации кириллицы в латиницу для имен файлов
+function transliterateToLatin(text: string): string {
+    const cyrillicMap: Record<string, string> = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+        'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+        'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+        'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
+        'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+        'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo',
+        'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M',
+        'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+        'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Sch', 'Ъ': '',
+        'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya'
+    };
+    
+    return text.split('').map(char => cyrillicMap[char] || char).join('');
+}
+
+// Функция для генерации безопасного имени файла (латиница)
+function sanitizeFileName(name: string): string {
+    // Сначала транслитерируем кириллицу в латиницу
+    const latinName = transliterateToLatin(name);
+    // Затем оставляем только латинские буквы, цифры и заменяем остальное на _
+    return latinName.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
 // ==========================================
 // БЛОК: ЗАГРУЗКА ТЕКСТОВ ИЗ JSON ФАЙЛА
 // ==========================================
@@ -169,7 +195,8 @@ async function convertKomootToGpx(komootUrl: string): Promise<{ filename: string
         const coordinates = data?.page?._embedded?.tour?._embedded?.coordinates?.items;
         if (!coordinates) return null;
         const points = coordinates.map((c: any) => `      <trkpt lat="${c.lat}" lon="${c.lng}"><ele>${c.alt}</ele></trkpt>`).join('\n');
-        return { filename: `${tourName.replace(/[^a-z0-9]/gi, '_')}.gpx`, content: `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${tourName}</name></metadata><trk><name>${tourName}</name><trkseg>\n${points}\n</trkseg></trk></gpx>` };
+        // Используем sanitizeFileName для транслитерации кириллицы в латиницу
+        return { filename: `${sanitizeFileName(tourName)}.gpx`, content: `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${tourName}</name></metadata><trk><name>${tourName}</name><trkseg>\n${points}\n</trkseg></trk></gpx>` };
     } catch (e) { return null; }
 }
 
@@ -572,8 +599,8 @@ bot.callbackQuery(/^open_gpx:(.+):(\d+)$/, async (ctx) => {
         
         const gpxContent = await gpxResponse.text();
         
-        // Формируем имя файла из названия маршрута
-        const fileName = `${ride.routeName.replace(/[^a-zA-Z0-9]/g, '_')}.gpx`;
+        // Формируем имя файла из названия маршрута (транслитерация кириллицы)
+        const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
         
         // Отправляем файл пользователю
         await ctx.replyWithDocument(new InputFile(Buffer.from(gpxContent), fileName));
@@ -614,8 +641,8 @@ bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
         
         const gpxContent = await gpxResponse.text();
         
-        // Формируем имя файла и подпись для пересылки друзьям
-        const fileName = `${ride.routeName.replace(/[^a-zA-Z0-9]/g, '_')}.gpx`;
+        // Формируем имя файла и подпись для пересылки друзьям (транслитерация кириллицы)
+        const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
         
         // Формируем подпись с информацией о маршруте
         const shareCaption = `${ride.routeName}
