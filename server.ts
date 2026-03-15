@@ -517,9 +517,9 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
             `${ride.weatherParams.temperature}º\n` +
             `${ride.weatherParams.wind}\n` +
             `${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет осадков'}\n` +
-            `${ride.weatherParams.sunshine}\n\n` +
-            `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_0">📍 GPX файл</a>`;
+            `${ride.weatherParams.sunshine}`;
         
+        // Отправляем текст и сразу GPX файл
         await ctx.reply(message, { 
             parse_mode: "HTML", 
             link_preview_options: { is_disabled: true },
@@ -529,6 +529,20 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
                 ]
             }
         });
+        
+        // Сразу отправляем GPX файл
+        if (ride.gpxUrl) {
+            try {
+                const gpxResponse = await fetch(ride.gpxUrl);
+                if (gpxResponse.ok) {
+                    const gpxContent = await gpxResponse.text();
+                    const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
+                    await ctx.replyWithDocument(new InputFile(Buffer.from(gpxContent), fileName));
+                }
+            } catch (e) {
+                console.error("[GPX error]:", e);
+            }
+        }
         return;
     }
     
@@ -576,13 +590,13 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             `<b>Осадки:</b> ${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет'}\n` +
             `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
             `<b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
-            `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
-            `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_${rideIndex}">📍 GPX файл</a>`;
+            `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}`;
         
         const buttons = [
             [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
         ];
         
+        // Отправляем текст сообщения
         try {
             await ctx.editMessageText(message, { 
                 parse_mode: "HTML",
@@ -590,12 +604,25 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
                 link_preview_options: { is_disabled: true }
             });
         } catch (e) {
-            // Если не удается редактировать (например, сообщение слишком старое) - отправляем новое
             await ctx.reply(message, { 
                 parse_mode: "HTML",
                 reply_markup: { inline_keyboard: buttons },
                 link_preview_options: { is_disabled: true }
             });
+        }
+        
+        // Сразу отправляем GPX файл
+        if (ride.gpxUrl) {
+            try {
+                const gpxResponse = await fetch(ride.gpxUrl);
+                if (gpxResponse.ok) {
+                    const gpxContent = await gpxResponse.text();
+                    const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
+                    await ctx.replyWithDocument(new InputFile(Buffer.from(gpxContent), fileName));
+                }
+            } catch (e) {
+                console.error("[GPX error]:", e);
+            }
         }
         
         await ctx.answerCallbackQuery();
