@@ -245,10 +245,8 @@ async function telegramApiCall(method: string, body: any, timeoutMs = 10000): Pr
 }
 
 // ==========================================
-// БЛОК 0: РУЧНАЯ УСТАНОВКА WEBHOOK ЧЕРЗ API
+// БЛОК 0: УСТАНОВКА WEBHOOK ПРИ СТАРТЕ
 // ==========================================
-// Убрали автоматическую установку webhook при старте - 
-// Vercel имеет ограничения сети, лучше устанавливать вручную
 async function setupWebhookManual(): Promise<{ success: boolean; message: string }> {
     const webhookUrl = process.env.VERCEL_URL 
         ? `https://${process.env.VERCEL_URL}/api/webhook`
