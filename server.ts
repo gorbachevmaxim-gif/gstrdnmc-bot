@@ -506,52 +506,17 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
     const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
     const formattedDate = `${day} ${months[month]}`;
     
-    // Если только один маршрут - сразу показываем детали с GPX
+    // Если только один маршрут - сразу показываем детали
     if (rides.length === 1) {
         const ride = rides[0];
-        
-        // Отправляем сообщение с GPX файлом вложением (caption = описание маршрута)
-        if (ride.gpxUrl) {
-            try {
-                const gpxResponse = await fetch(ride.gpxUrl);
-                if (gpxResponse.ok) {
-                    const gpxContent = await gpxResponse.text();
-                    const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
-                    const caption = `<b>${ride.routeName}</b>\n\n` +
-                        `${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n` +
-                        `Время: ${ride.routeParams.saddleTime}\n\n` +
-                        `${ride.weatherParams.temperature}º\n` +
-                        `${ride.weatherParams.wind}\n` +
-                        `${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет осадков'}\n` +
-                        `${ride.weatherParams.sunshine}`;
-                    
-                    await ctx.replyWithDocument(
-                        new InputFile(Buffer.from(gpxContent), fileName),
-                        { 
-                            caption: caption,
-                            parse_mode: "HTML",
-                            reply_markup: {
-                                inline_keyboard: [
-                                    [{ text: "На главную", callback_data: "rides_main" }]
-                                ]
-                            }
-                        }
-                    );
-                    return;
-                }
-            } catch (e) {
-                console.error("[GPX error]:", e);
-            }
-        }
-        
-        // Если GPX не загрузился - просто текст
         const message = `<b>${ride.routeName}</b>\n\n` +
             `${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n` +
             `Время: ${ride.routeParams.saddleTime}\n\n` +
             `${ride.weatherParams.temperature}º\n` +
             `${ride.weatherParams.wind}\n` +
             `${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет осадков'}\n` +
-            `${ride.weatherParams.sunshine}`;
+            `${ride.weatherParams.sunshine}\n\n` +
+            `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_0">Скачать GPX</a>`;
         
         await ctx.reply(message, { 
             parse_mode: "HTML", 
@@ -599,50 +564,6 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             return;
         }
         
-        const buttons = [
-            [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
-        ];
-        
-        // Пробуем отправить с GPX файлом вложением
-        if (ride.gpxUrl) {
-            try {
-                const gpxResponse = await fetch(ride.gpxUrl);
-                if (gpxResponse.ok) {
-                    const gpxContent = await gpxResponse.text();
-                    const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
-                    const caption = `<b>${ride.routeName}</b>\n\n` +
-                        `<b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
-                        `<b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
-                        `<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
-                        `<b>Температура:</b> ${ride.weatherParams.temperature}º\n` +
-                        `<b>Ветер:</b> ${ride.weatherParams.wind}\n` +
-                        `<b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
-                        `<b>Осадки:</b> ${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет'}\n` +
-                        `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
-                        `<b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
-                        `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}`;
-                    
-                    try {
-                        await ctx.editMessageText("📎 Загружаю маршрут...", {});
-                    } catch (e) {}
-                    
-                    await ctx.replyWithDocument(
-                        new InputFile(Buffer.from(gpxContent), fileName),
-                        { 
-                            caption: caption,
-                            parse_mode: "HTML",
-                            reply_markup: { inline_keyboard: buttons }
-                        }
-                    );
-                    await ctx.answerCallbackQuery();
-                    return;
-                }
-            } catch (e) {
-                console.error("[GPX error]:", e);
-            }
-        }
-        
-        // Если GPX не загрузился - просто текст
         const message = `<b>${ride.routeName}</b>\n\n` +
             `<b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
             `<b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
@@ -653,7 +574,12 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             `<b>Осадки:</b> ${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет'}\n` +
             `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
             `<b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
-            `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}`;
+            `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
+            `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_${rideIndex}">Скачать GPX</a>`;
+        
+        const buttons = [
+            [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
+        ];
         
         try {
             await ctx.editMessageText(message, { 
