@@ -339,7 +339,80 @@ const mainKeyboard = {
 // ==========================================
 // БЛОК 2: КОМАНДЫ (Обязательно ПЕРЕД нейросетью!)
 // ==========================================
-bot.command("start", (ctx) => ctx.reply(botTexts.commands.start, { reply_markup: mainKeyboard }));
+bot.command("start", async (ctx) => {
+    // Проверяем, есть ли параметр start (например, start=share_2026-03-15_0)
+    const startParam = ctx.match;
+    
+    if (startParam && startParam.startsWith('share_')) {
+        // Извлекаем dateKey и rideIndex из параметра
+        const shareData = startParam.replace('share_', '');
+        const parts = shareData.split('_');
+        
+        if (parts.length >= 2) {
+            const dateKey = parts.slice(0, -1).join('_'); // Всё кроме последнего - это дата
+            const rideIndex = parseInt(parts[parts.length - 1]);
+            
+            if (!isNaN(rideIndex)) {
+                await handleShareGpx(ctx, dateKey, rideIndex);
+                return;
+            }
+        }
+    }
+    
+    // Обычный старт
+    ctx.reply(botTexts.commands.start, { reply_markup: mainKeyboard });
+});
+
+// Функция для обработки запроса GPX через ссылку
+async function handleShareGpx(ctx: any, dateKey: string, rideIndex: number) {
+    await ctx.reply("Загружаю GPX...");
+    
+    try {
+        const apiKey = process.env.BOT_API_KEY;
+        const baseUrl = process.env.RAIN_FREE_URL || "https://rain-free.vercel.app";
+        const response = await fetch(`${baseUrl}/api/bot-data`, { headers: { 'x-api-key': apiKey || '' } });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data: any = await response.json();
+        
+        const dayInfo = data.groupedByDate?.[dateKey];
+        const ride = dayInfo?.rides?.[rideIndex];
+        
+        if (!ride || !ride.gpxUrl) {
+            await ctx.reply("GPX не найден");
+            return;
+        }
+        
+        // Скачиваем GPX файл
+        const gpxResponse = await fetch(ride.gpxUrl);
+        if (!gpxResponse.ok) {
+            await ctx.reply("Не удалось скачать GPX");
+            return;
+        }
+        
+        const gpxContent = await gpxResponse.text();
+        
+        // Формируем имя файла и подпись для пересылки друзьям (транслитерация кириллицы)
+        const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
+        
+        // Формируем подпись с информацией о маршруте
+        const shareCaption = `${ride.routeName}
+
+${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м | ${ride.routeParams.saddleTime}
+${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}
+
+GPX-файл для навигатора`;
+        
+        // Отправляем файл с подписью для удобной пересылки
+        await ctx.replyWithDocument(
+            new InputFile(Buffer.from(gpxContent), fileName),
+            { caption: shareCaption, parse_mode: "HTML" }
+        );
+        
+    } catch (err) {
+        console.error("[Share GPX error]:", err);
+        await ctx.reply("Ошибка при загрузке GPX");
+    }
+}
 
 bot.command("help", async (ctx) => {
     await ctx.reply(botTexts.commands.help);
@@ -444,14 +517,14 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
             `${ride.weatherParams.temperature}º\n` +
             `${ride.weatherParams.wind}\n` +
             `${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет осадков'}\n` +
-            `${ride.weatherParams.sunshine}`;
+            `${ride.weatherParams.sunshine}\n\n` +
+            `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_0">📍 GPX файл</a>`;
         
         await ctx.reply(message, { 
             parse_mode: "HTML", 
             link_preview_options: { is_disabled: true },
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "Скачать GPX", callback_data: `open_gpx:${dateKey}:0` }, { text: "Поделиться", callback_data: `share_gpx:${dateKey}:0` }],
                     [{ text: "На главную", callback_data: "rides_main" }]
                 ]
             }
@@ -503,10 +576,10 @@ bot.callbackQuery(/^ride_detail:(.+):(\d+)$/, async (ctx) => {
             `<b>Осадки:</b> ${ride.weatherParams.precipitation ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` : 'Нет'}\n` +
             `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
             `<b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
-            `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}`;
+            `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}\n\n` +
+            `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_${rideIndex}">📍 GPX файл</a>`;
         
         const buttons = [
-            [{ text: "Скачать GPX", callback_data: `open_gpx:${dateKey}:${rideIndex}` }, { text: "Поделиться", callback_data: `share_gpx:${dateKey}:${rideIndex}` }],
             [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
         ];
         
