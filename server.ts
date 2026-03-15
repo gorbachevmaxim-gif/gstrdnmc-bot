@@ -518,7 +518,8 @@ async function showRidesForDay(ctx: any, dateKey: string, dayInfo: any) {
             `${ride.weatherParams.sunshine}\n\n` +
             `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_0">Скачать GPX</a>`;
         
-        await ctx.reply(message, { 
+        // Используем editMessageText для совместимости с кнопкой "Назад"
+        await ctx.editMessageText(message, { 
             parse_mode: "HTML", 
             link_preview_options: { is_disabled: true },
             reply_markup: {
