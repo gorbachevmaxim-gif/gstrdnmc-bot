@@ -396,9 +396,7 @@ async function handleShareGpx(ctx: any, dateKey: string, rideIndex: number) {
         const shareCaption = `${ride.routeName}
 
 ${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м | ${ride.routeParams.saddleTime}
-${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}
-
-GPX-файл для навигатора`;
+${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}`;
         
         // Отправляем файл с подписью для удобной пересылки
         await ctx.replyWithDocument(
@@ -719,9 +717,7 @@ bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
         const shareCaption = `${ride.routeName}
 
 ${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м | ${ride.routeParams.saddleTime}
-${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}
-
-GPX-файл для навигатора`;
+${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}`;
         
         // Отправляем файл с подписью для удобной пересылки
         await ctx.replyWithDocument(
