@@ -158,18 +158,8 @@ async function showRidesForDay(ctx: Context, dateKey: string, dayInfo: any) {
   
   if (rides.length === 1) {
     const ride = rides[0];
-    const precip = ride.weatherParams.precipitation 
-      ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` 
-      : 'Нет осадков';
-    
-    const message = `<b>${ride.routeName}</b>\n\n` +
-      `${ride.routeParams.distance} км / ${ride.routeParams.elevationGain} м\n` +
-      `Время: ${ride.routeParams.saddleTime}\n\n` +
-      `${ride.weatherParams.temperature}º\n` +
-      `${ride.weatherParams.wind}\n` +
-      `${precip}\n` +
-      `${ride.weatherParams.sunshine}\n\n` +
-      `<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_0">Скачать GPX</a>`;
+    const message = formatRideDetails(ride) + 
+      `\n\n<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_0">Скачать GPX</a>`;
     
     await ctx.editMessageText(message, { 
       parse_mode: "HTML", 
