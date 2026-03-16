@@ -162,7 +162,7 @@ export function formatRideDetails(ride: any): string {
 export function formatShareCaption(ride: any): string {
   return `${ride.routeName}\n\n` +
     `${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м | ${ride.routeParams.saddleTime}\n` +
-    `${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}`;
+    `${ride.weatherParams.temperature}º | ${ride.weatherParams.wind} `;
 }
 
 // ==========================================
