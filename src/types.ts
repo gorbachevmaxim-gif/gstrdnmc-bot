@@ -29,8 +29,9 @@ export interface Tour {
 }
 
 export interface RouteParams {
-  distance: string;
-  elevationGain: string;
+  distance: number;
+  elevationGain: number;
+  pace?: number;
   saddleTime: string;
 }
 
@@ -42,19 +43,45 @@ export interface WeatherParams {
   sunshine: string;
 }
 
+export interface Transport {
+  to: string;
+  from: string;
+}
+
+export interface Profile {
+  score?: number;
+  difficulty?: string;
+  distanceRank?: string;
+  speedRank?: string;
+}
+
+export interface Food {
+  start: string;
+  end: string;
+}
+
 export interface Nutrition {
-  bidons: string;
-  gels: string;
+  bidons: number;
+  gels: number;
+}
+
+export interface Analysis {
+  transport?: Transport;
+  clothing?: string;
+  profile?: Profile;
+  food?: Food;
+  nutrition?: Nutrition;
 }
 
 export interface Ride {
+  date?: string;
+  dayName?: string;
   routeName: string;
+  gpxUrl?: string;
+  gpxFilename?: string;
   routeParams: RouteParams;
   weatherParams: WeatherParams;
-  gpxUrl?: string;
-  analysis?: {
-    nutrition?: Nutrition;
-  };
+  analysis?: Analysis;
 }
 
 export interface DayInfo {

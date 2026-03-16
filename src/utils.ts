@@ -146,7 +146,7 @@ export function formatRideDetails(ride: any): string {
     ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` 
     : 'Нет';
   
-  return `<b>${ride.routeName}</b>\n\n` +
+  let message = `<b>${ride.routeName}</b>\n\n` +
     `<b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
     `<b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
     `<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
@@ -154,15 +154,62 @@ export function formatRideDetails(ride: any): string {
     `<b>Ветер:</b> ${ride.weatherParams.wind}\n` +
     `<b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
     `<b>Осадки:</b> ${precip}\n` +
-    `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n` +
-    `<b>Бидонов:</b> ${ride.analysis?.nutrition?.bidons || '-'}\n` +
-    `<b>Гели:</b> ${ride.analysis?.nutrition?.gels || '-'}`;
+    `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n`;
+  
+  // Transport (Туда/Обратно)
+  if (ride.analysis?.transport?.to) {
+    message += `<b>Туда:</b> <a href="${ride.analysis.transport.to}">Билеты</a>\n`;
+  }
+  if (ride.analysis?.transport?.from) {
+    message += `<b>Обратно:</b> <a href="${ride.analysis.transport.from}">Билеты</a>\n`;
+  }
+  
+  // Clothing (Что надеть)
+  if (ride.analysis?.clothing) {
+    message += `\n<b>Что надеть:</b> ${ride.analysis.clothing}\n`;
+  }
+  
+  // Profile (Профиль)
+  if (ride.analysis?.profile) {
+    const { difficulty, distanceRank, speedRank } = ride.analysis.profile;
+    message += `\n<b>Профиль:</b>`;
+    if (difficulty) message += ` ${difficulty}`;
+    if (distanceRank) message += ` | ${distanceRank}`;
+    if (speedRank) message += ` | ${speedRank}`;
+    message += `\n`;
+  }
+  
+  // Food (Где поесть)
+  if (ride.analysis?.food) {
+    if (ride.analysis.food.start) {
+      message += `\n<b>Поесть:</b> <a href="${ride.analysis.food.start}">${ride.routeParams.distance > 80 ? 'Старт' : 'Кафе'}</a>`;
+    }
+    if (ride.analysis.food.end && ride.analysis.food.end !== ride.analysis.food.start) {
+      message += ` | <a href="${ride.analysis.food.end}">Финиш</a>`;
+    }
+    message += `\n`;
+  }
+  
+  // Nutrition (Спортпит)
+  if (ride.analysis?.nutrition) {
+    const { bidons, gels } = ride.analysis.nutrition;
+    message += `\n<b>Бидонов:</b> ${bidons || '-'} | <b>Гели:</b> ${gels || '-'}\n`;
+  }
+  
+  return message;
 }
 
 export function formatShareCaption(ride: any): string {
-  return `${ride.routeName}\n\n` +
+  let caption = `${ride.routeName}\n\n` +
     `${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м | ${ride.routeParams.saddleTime}\n` +
-    `${ride.weatherParams.temperature}º | ${ride.weatherParams.wind} `;
+    `${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}`;
+  
+  // Add clothing hint if available
+  if (ride.analysis?.clothing) {
+    caption += `\n${ride.analysis.clothing}`;
+  }
+  
+  return caption;
 }
 
 // ==========================================
