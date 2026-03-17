@@ -141,12 +141,24 @@ export function parseShareParam(param: string): { dateKey: string; rideIndex: nu
 // MESSAGE FORMATTING HELPERS
 // ==========================================
 
-export function formatRideDetails(ride: any): string {
+export function formatRideDetails(ride: any, dateKey?: string, months?: string[]): string {
   const precip = ride.weatherParams.precipitation 
     ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` 
     : 'Нет';
   
+  // Format date if available
+  let dateLine = '';
+  if (dateKey && months) {
+    const dateParts = dateKey.split('-');
+    const day = parseInt(dateParts[2]);
+    const month = parseInt(dateParts[1]) - 1;
+    const formattedDate = `${day} ${months[month]}`;
+    const dayName = ride.dayName || '';
+    dateLine = `<b>${dayName}, ${formattedDate}</b>\n\n`;
+  }
+  
   let message = `<b>${ride.routeName}</b>\n\n` +
+    dateLine +
     `<b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
     `<b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n` +
     `<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
@@ -171,9 +183,10 @@ export function formatRideDetails(ride: any): string {
   
   // Profile (Профиль)
   if (ride.analysis?.profile) {
-    const { difficulty, distanceRank, speedRank } = ride.analysis.profile;
+    const { score, difficulty, distanceRank, speedRank } = ride.analysis.profile;
     message += `\n<b>Профиль:</b>`;
-    if (difficulty) message += ` ${difficulty}`;
+    if (score) message += ` ProfileScore ${score}`;
+    if (difficulty) message += ` | ${difficulty}`;
     if (distanceRank) message += ` | ${distanceRank}`;
     if (speedRank) message += ` | ${speedRank}`;
     message += `\n`;
@@ -199,14 +212,34 @@ export function formatRideDetails(ride: any): string {
   return message;
 }
 
-export function formatShareCaption(ride: any): string {
-  let caption = `${ride.routeName}\n\n` +
-    `${ride.routeParams.distance} км | ${ride.routeParams.elevationGain} м | ${ride.routeParams.saddleTime}\n` +
-    `${ride.weatherParams.temperature}º | ${ride.weatherParams.wind}`;
+export function formatShareCaption(ride: any, dateKey?: string, months?: string[]): string {
+  // Format start-finish from route name
+  const routeName = ride.routeName || '';
+  const startFinish = routeName.includes('—') ? routeName : '';
   
-  // Add clothing hint if available
-  if (ride.analysis?.clothing) {
-    caption += `\n${ride.analysis.clothing}`;
+  // Format date
+  let dateLine = '';
+  if (dateKey && months) {
+    const dateParts = dateKey.split('-');
+    const day = parseInt(dateParts[2]);
+    const month = parseInt(dateParts[1]) - 1;
+    const formattedDate = `${day} ${months[month]}`;
+    const dayName = ride.dayName || '';
+    dateLine = `${dayName}, ${formattedDate}\n`;
+  }
+  
+  const distance = ride.routeParams.distance || 0;
+  const elevation = ride.routeParams.elevationGain || 0;
+  const time = ride.routeParams.saddleTime || '00:00';
+  
+  let caption = '';
+  if (startFinish) caption += `${startFinish}\n`;
+  if (dateLine) caption += `${dateLine}`;
+  caption += `${distance} км | ${elevation} м | ${time}\n`;
+  
+  // Add Profile Score if available
+  if (ride.analysis?.profile?.score) {
+    caption += `Profile Score ${ride.analysis.profile.score}`;
   }
   
   return caption;

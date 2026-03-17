@@ -81,7 +81,7 @@ export async function handleShareGpx(ctx: Context, dateKey: string, rideIndex: n
   }
   
   const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
-  const shareCaption = formatShareCaption(ride);
+  const shareCaption = formatShareCaption(ride, dateKey, MONTHS);
   
   await ctx.replyWithDocument(
     new InputFile(Buffer.from(gpxContent), fileName),
@@ -158,7 +158,7 @@ async function showRidesForDay(ctx: Context, dateKey: string, dayInfo: any) {
   
   if (rides.length === 1) {
     const ride = rides[0];
-    const message = formatRideDetails(ride) + 
+    const message = formatRideDetails(ride, dateKey, MONTHS) + 
       `\n\n<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_0">Скачать GPX</a>`;
     
     await ctx.editMessageText(message, { 
@@ -200,7 +200,7 @@ export async function handleRideDetailCallback(ctx: Context, dateKey: string, ri
     return;
   }
   
-  const message = formatRideDetails(ride) + 
+  const message = formatRideDetails(ride, dateKey, MONTHS) + 
     `\n\n<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_${rideIndex}">Скачать GPX</a>`;
   
   const buttons = [
@@ -302,7 +302,7 @@ export async function handleShareGpxCallback(ctx: Context, dateKey: string, ride
   }
   
   const fileName = `${sanitizeFileName(ride.routeName)}.gpx`;
-  const shareCaption = formatShareCaption(ride);
+  const shareCaption = formatShareCaption(ride, dateKey, MONTHS);
   
   await ctx.replyWithDocument(
     new InputFile(Buffer.from(gpxContent), fileName),
