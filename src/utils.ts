@@ -164,7 +164,7 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
     `<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n\n` +
     `<b>Температура:</b> ${ride.weatherParams.temperature}º\n` +
     `<b>Ветер:</b> ${ride.weatherParams.wind}\n` +
-    `<b>Порывы:</b> ${ride.weatherParams.gusts || 'Нет'}\n` +
+    `<b>Порывы:</b> ${ride.weatherParams.gusts ? `${ride.weatherParams.gusts} км/ч` : 'Нет'}\n` +
     `<b>Осадки:</b> ${precip}\n` +
     `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n\n`;
   
@@ -195,7 +195,7 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
   // Food (Где поесть)
   if (ride.analysis?.food) {
     if (ride.analysis.food.start) {
-      message += `\n<b>Поесть:</b> <a href="${ride.analysis.food.start}">${ride.routeParams.distance > 80 ? 'Старт' : 'Кафе'}</a>`;
+      message += `\n<b>Где поесть:</b> <a href="${ride.analysis.food.start}">${ride.routeParams.distance > 80 ? 'Старт' : 'Кафе'}</a>`;
     }
     if (ride.analysis.food.end && ride.analysis.food.end !== ride.analysis.food.start) {
       message += ` | <a href="${ride.analysis.food.end}">Финиш</a>`;

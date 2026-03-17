@@ -173,10 +173,13 @@ async function showRidesForDay(ctx: Context, dateKey: string, dayInfo: any) {
     return;
   }
   
-  const buttons = rides.map(ride => [{
-    text: `${ride.routeName} (${ride.routeParams.distance}км)`,
-    callback_data: `ride_detail:${dateKey}:${rides.indexOf(ride)}`
-  }]);
+  const buttons = rides.map(ride => {
+    const ps = ride.analysis?.profile?.score ? ` (ps ${ride.analysis.profile.score})` : '';
+    return [{
+      text: `${ride.routeName}, ${ride.routeParams.distance}км${ps}`,
+      callback_data: `ride_detail:${dateKey}:${rides.indexOf(ride)}`
+    }];
+  });
   
   buttons.push([{ text: "← Назад к дням", callback_data: "rides_main" }]);
   
