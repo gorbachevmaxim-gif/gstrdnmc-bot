@@ -227,9 +227,11 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
     `<b>Осадки:</b> ${precip}\n` +
     `<b>Солнце:</b> ${ride.weatherParams.sunshine}\n`;
   
-  // Transport (Туда/Обратно) - keep at bottom for reference
+  // Clothing (Что надеть)
+  message += clothingLine;
+  
+  // Transport (Туда/Обратно)
   if (ride.analysis?.transport?.to || ride.analysis?.transport?.from) {
-    message += '\n';
     if (ride.analysis?.transport?.to) {
       message += `<b>Туда:</b> <a href="${ride.analysis.transport.to}">Билеты</a>\n`;
     }
@@ -238,7 +240,8 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
     }
   }
   
-  message += clothingLine + foodLine;
+  // Food (Где поесть)
+  message += foodLine;
   
   return message;
 }
