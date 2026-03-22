@@ -36,6 +36,23 @@ interface HandlerContext {
 }
 
 // ==========================================
+// HELPER: SAFE ANSWER CALLBACK QUERY
+// ==========================================
+
+async function safeAnswerCallbackQuery(ctx: Context, text?: string): Promise<void> {
+  try {
+    if (text) {
+      await ctx.answerCallbackQuery(text);
+    } else {
+      await ctx.answerCallbackQuery();
+    }
+  } catch (e: any) {
+    // Query expired or invalid - ignore, user can still see the message
+    console.warn("answerCallbackQuery failed:", e?.message);
+  }
+}
+
+// ==========================================
 // START COMMAND
 // ==========================================
 
@@ -134,12 +151,12 @@ export async function handleRideDayCallback(ctx: Context, dateKey: string) {
   const dayInfo = data?.groupedByDate?.[dateKey];
   
   if (!dayInfo) {
-    await ctx.answerCallbackQuery("Данные не найдены");
+    await safeAnswerCallbackQuery(ctx, "Данные не найдены");
     return;
   }
   
   await showRidesForDay(ctx, dateKey, dayInfo);
-  await ctx.answerCallbackQuery();
+  await safeAnswerCallbackQuery(ctx);
 }
 
 // ==========================================
@@ -199,7 +216,7 @@ export async function handleRideDetailCallback(ctx: Context, dateKey: string, ri
   const ride = dayInfo?.rides?.[rideIndex];
   
   if (!ride) {
-    await ctx.answerCallbackQuery("Маршрут не найден");
+    await safeAnswerCallbackQuery(ctx, "Маршрут не найден");
     return;
   }
   
@@ -248,7 +265,7 @@ export async function handleRideDetailCallback(ctx: Context, dateKey: string, ri
     });
   }
   
-  await ctx.answerCallbackQuery();
+  await safeAnswerCallbackQuery(ctx);
 }
 
 // ==========================================
@@ -277,7 +294,7 @@ export async function handleRidesMainCallback(ctx: Context) {
     reply_markup: { inline_keyboard: buttons }
   });
   
-  await ctx.answerCallbackQuery();
+  await safeAnswerCallbackQuery(ctx);
 }
 
 // ==========================================
@@ -285,20 +302,20 @@ export async function handleRidesMainCallback(ctx: Context) {
 // ==========================================
 
 export async function handleOpenGpxCallback(ctx: Context, dateKey: string, rideIndex: number) {
-  await ctx.answerCallbackQuery("Загружаю GPX...");
+  await safeAnswerCallbackQuery(ctx, "Загружаю GPX...");
   
   const data = await fetchBotData();
   const dayInfo = data?.groupedByDate?.[dateKey];
   const ride = dayInfo?.rides?.[rideIndex];
   
   if (!ride?.gpxUrl) {
-    await ctx.answerCallbackQuery("GPX не найден");
+    await safeAnswerCallbackQuery(ctx, "GPX не найден");
     return;
   }
   
   const gpxContent = await fetchGpxContent(ride.gpxUrl);
   if (!gpxContent) {
-    await ctx.answerCallbackQuery("Не удалось скачать GPX");
+    await safeAnswerCallbackQuery(ctx, "Не удалось скачать GPX");
     return;
   }
   
@@ -311,20 +328,20 @@ export async function handleOpenGpxCallback(ctx: Context, dateKey: string, rideI
 // ==========================================
 
 export async function handleShareGpxCallback(ctx: Context, dateKey: string, rideIndex: number) {
-  await ctx.answerCallbackQuery("Подготавливаю GPX...");
+  await safeAnswerCallbackQuery(ctx, "Подготавливаю GPX...");
   
   const data = await fetchBotData();
   const dayInfo = data?.groupedByDate?.[dateKey];
   const ride = dayInfo?.rides?.[rideIndex];
   
   if (!ride?.gpxUrl) {
-    await ctx.answerCallbackQuery("GPX не найден");
+    await safeAnswerCallbackQuery(ctx, "GPX не найден");
     return;
   }
   
   const gpxContent = await fetchGpxContent(ride.gpxUrl);
   if (!gpxContent) {
-    await ctx.answerCallbackQuery("Не удалось скачать GPX");
+    await safeAnswerCallbackQuery(ctx, "Не удалось скачать GPX");
     return;
   }
   
@@ -372,7 +389,7 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
       explanation = SPEED_RANK_EXPLANATION;
       break;
     default:
-      await ctx.answerCallbackQuery("Неизвестный тип объяснения");
+      await safeAnswerCallbackQuery(ctx, "Неизвестный тип объяснения");
       return;
   }
   
@@ -380,11 +397,7 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
   await ctx.reply(`${title}\n\n${explanation}`);
   
   // Acknowledge callback query (without alert)
-  try {
-    await ctx.answerCallbackQuery();
-  } catch (e) {
-    // Query may have expired - ignore
-  }
+  await safeAnswerCallbackQuery(ctx);
 }
 
 // ==========================================
