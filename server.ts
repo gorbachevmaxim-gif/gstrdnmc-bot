@@ -199,7 +199,7 @@ bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
 });
 
 // Callback for profile parameter explanations
-bot.callbackQuery(/^explain:(profile|difficulty|distance|speed):(.+):(\d+)$/, async (ctx) => {
+bot.callbackQuery(/^explain:(profile|difficulty|distance|speed):([^:]+):(\d+)$/, async (ctx) => {
   const type = ctx.match[1];
   const dateKey = ctx.match[2];
   const rideIndex = parseInt(ctx.match[3]);

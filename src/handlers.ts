@@ -209,27 +209,27 @@ export async function handleRideDetailCallback(ctx: Context, dateKey: string, ri
   // Build inline keyboard with explanation buttons for profile parameters
   const buttons: any[] = [];
   
-  // Add profile parameter explanation buttons if available
+  // Add profile parameter explanation buttons if available (2x2 grid)
   const profile = ride.analysis?.profile;
   if (profile) {
-    const profileButtons: any[] = [];
+    const row1: any[] = [];
+    const row2: any[] = [];
     
     if (profile.difficulty) {
-      profileButtons.push({ text: "Сложность ❓", callback_data: `explain:difficulty:${dateKey}:${rideIndex}` });
+      row1.push({ text: "Сложность", callback_data: `explain:difficulty:${dateKey}:${rideIndex}` });
     }
     if (profile.distanceRank) {
-      profileButtons.push({ text: "Дистанция ❓", callback_data: `explain:distance:${dateKey}:${rideIndex}` });
+      row1.push({ text: "Дистанция", callback_data: `explain:distance:${dateKey}:${rideIndex}` });
     }
     if (profile.speedRank) {
-      profileButtons.push({ text: "Темп ❓", callback_data: `explain:speed:${dateKey}:${rideIndex}` });
+      row2.push({ text: "Темп", callback_data: `explain:speed:${dateKey}:${rideIndex}` });
     }
     if (profile.score) {
-      profileButtons.push({ text: "ProfileScore ❓", callback_data: `explain:profile:${dateKey}:${rideIndex}` });
+      row2.push({ text: "ProfileScore", callback_data: `explain:profile:${dateKey}:${rideIndex}` });
     }
     
-    if (profileButtons.length > 0) {
-      buttons.push(profileButtons);
-    }
+    if (row1.length > 0) buttons.push(row1);
+    if (row2.length > 0) buttons.push(row2);
   }
   
   buttons.push([{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]);

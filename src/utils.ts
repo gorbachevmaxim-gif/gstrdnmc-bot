@@ -242,8 +242,10 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
   // Clothing (Что надеть)
   message += clothingLine;
   
+  
   // Transport (Туда/Обратно) - keep existing format with links
   if (ride.analysis?.transport?.to || ride.analysis?.transport?.from) {
+    message += `\n`;
     if (ride.analysis?.transport?.to) {
       message += `<b>Туда:</b> <a href="${ride.analysis.transport.to}">Билеты</a>\n`;
     }
