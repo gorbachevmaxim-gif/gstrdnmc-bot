@@ -206,9 +206,33 @@ export async function handleRideDetailCallback(ctx: Context, dateKey: string, ri
   const message = formatRideDetails(ride, dateKey, MONTHS) + 
     `\n\n<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_${rideIndex}">Скачать GPX</a>`;
   
-  const buttons = [
-    [{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]
-  ];
+  // Build inline keyboard with explanation buttons for profile parameters
+  const buttons: any[] = [];
+  
+  // Add profile parameter explanation buttons if available
+  const profile = ride.analysis?.profile;
+  if (profile) {
+    const profileButtons: any[] = [];
+    
+    if (profile.difficulty) {
+      profileButtons.push({ text: "Сложность ❓", callback_data: `explain:difficulty:${dateKey}:${rideIndex}` });
+    }
+    if (profile.distanceRank) {
+      profileButtons.push({ text: "Дистанция ❓", callback_data: `explain:distance:${dateKey}:${rideIndex}` });
+    }
+    if (profile.speedRank) {
+      profileButtons.push({ text: "Темп ❓", callback_data: `explain:speed:${dateKey}:${rideIndex}` });
+    }
+    if (profile.score) {
+      profileButtons.push({ text: "ProfileScore ❓", callback_data: `explain:profile:${dateKey}:${rideIndex}` });
+    }
+    
+    if (profileButtons.length > 0) {
+      buttons.push(profileButtons);
+    }
+  }
+  
+  buttons.push([{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]);
   
   try {
     await ctx.editMessageText(message, { 
@@ -311,6 +335,46 @@ export async function handleShareGpxCallback(ctx: Context, dateKey: string, ride
     new InputFile(Buffer.from(gpxContent), fileName),
     { caption: shareCaption, parse_mode: "HTML" }
   );
+}
+
+// ==========================================
+// CALLBACK: EXPLANATION (Profile Parameters)
+// ==========================================
+
+// Explanation texts for profile parameters
+const PROFILE_SCORE_EXPLANATION = `Общий набор высоты обманчив: 800 метров могут быть пологими или крутыми «стенками». ProfileScore показывает реальную сложность, оценивая «убойность» горок. Баллы зависят от крутизны и момента: подъем на финише «дороже», чем на старте. Высокий ProfileScore при малом наборе значит, что маршрут коварен и тяжелое в конце. (Формула ProCyclingStats)`;
+
+const DIFFICULTY_EXPLANATION = `С психологической точки зрения важно заранее понимать характер маршрута. Будет ли это монотонная работа или проверка на силу и выносливость, где придется потерпеть? Речь о влиянии рельефа на ощущения от катания. Тяжелый – Profile Score выше 20. Бодрый – от 12 до 20. Легкий – менее 12.`;
+
+const DISTANCE_RANK_EXPLANATION = `Большой маршрут – дистанция райда выше 160 км. Объемный – от 120 до 160 км. Короткий – менее 120 км.`;
+
+const SPEED_RANK_EXPLANATION = `Темповой – средняя скорость в движении должна быть выше 33 км/ч. Такая средняя необходима как условие для большого райда от 160 до 200 км. Прогулочный – оптимальная средняя от 30 до 33 км/ч.`;
+
+export async function handleExplanationCallback(ctx: Context, type: string, dateKey: string, rideIndex: number) {
+  let explanation = '';
+  
+  switch (type) {
+    case 'profile':
+      explanation = PROFILE_SCORE_EXPLANATION;
+      break;
+    case 'difficulty':
+      explanation = DIFFICULTY_EXPLANATION;
+      break;
+    case 'distance':
+      explanation = DISTANCE_RANK_EXPLANATION;
+      break;
+    case 'speed':
+      explanation = SPEED_RANK_EXPLANATION;
+      break;
+    default:
+      await ctx.answerCallbackQuery("Неизвестный тип объяснения");
+      return;
+  }
+  
+  await ctx.answerCallbackQuery({
+    text: explanation,
+    show_alert: true
+  });
 }
 
 // ==========================================

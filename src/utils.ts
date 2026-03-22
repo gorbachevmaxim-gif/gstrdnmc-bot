@@ -141,24 +141,6 @@ export function parseShareParam(param: string): { dateKey: string; rideIndex: nu
 // MESSAGE FORMATTING HELPERS
 // ==========================================
 
-// Explanation texts for links
-const PROFILE_SCORE_EXPLANATION = `\n\nОбщий набор высоты обманчив: 800 метров могут быть пологими или крутыми «стенками». ProfileScore показывает реальную сложность, оценивая «убойность» горок. Баллы зависят от крутизны и момента: подъем на финише «дороже», чем на старте. Высокий ProfileScore при малом наборе значит, что маршрут коварен и тяжелое в конце. (Формула ProCyclingStats)`;
-
-const DIFFICULTY_EXPLANATION = `С психологической точки зрения важно заранее понимать характер маршрута. Будет ли это монотонная работа или проверка на силу и выносливость, где придется потерпеть? Речь о влиянии рельефа на ощущения от катания. Тяжелый – Profile Score выше 20. Бодрый – от 12 до 20. Легкий – менее 12.`;
-
-const DISTANCE_RANK_EXPLANATION = `Большой маршрут – дистанция райда выше 160 км. Объемный – от 120 до 160 км. Короткий – менее 120 км.`;
-
-const SPEED_RANK_EXPLANATION = `Темповой – средняя скорость в движении должна быть выше 33 км/ч. Такая средняя необходима как условие для большого райда от 160 до 200 км. Прогулочный – оптимальная средняя от 30 до 33 км/ч.`;
-
-// Helper to create link with explanation
-function createLinkWithExplanation(text: string, explanation: string, url?: string): string {
-  if (url) {
-    return `<a href="${url}">${text}</a>`;
-  }
-  // If no URL, return text with explanation appended after message
-  return text;
-}
-
 export function formatRideDetails(ride: any, dateKey?: string, months?: string[]): string {
   const precip = ride.weatherParams.precipitation 
     ? `${Number(ride.weatherParams.precipitation.toFixed(1))} мм` 
@@ -178,33 +160,29 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
   // Route name (without "круговой" suffix in new format)
   const routeName = ride.routeName || '';
   
-  // Profile score with explanation
+  // Profile score 
   const profileScore = ride.analysis?.profile?.score ? ride.analysis.profile.score : null;
   
-  // Format profile with links and explanations
+  // Format profile values (explanations now in inline keyboard buttons)
   let profileLine = '';
-  const explanations: string[] = [];
   
   if (ride.analysis?.profile) {
     const { difficulty, distanceRank, speedRank } = ride.analysis.profile;
     const profileParts: string[] = [];
     
-    // Difficulty link
+    // Difficulty 
     if (difficulty) {
-      profileParts.push(`<a href="https://example.com/difficulty">${difficulty}</a>`);
-      explanations.push(DIFFICULTY_EXPLANATION);
+      profileParts.push(difficulty);
     }
     
-    // Distance rank link
+    // Distance rank
     if (distanceRank) {
-      profileParts.push(`<a href="https://example.com/distance">${distanceRank}</a>`);
-      explanations.push(DISTANCE_RANK_EXPLANATION);
+      profileParts.push(distanceRank);
     }
     
-    // Speed rank link
+    // Speed rank
     if (speedRank) {
-      profileParts.push(`<a href="https://example.com/speed">${speedRank}</a>`);
-      explanations.push(SPEED_RANK_EXPLANATION);
+      profileParts.push(speedRank);
     }
     
     if (profileParts.length > 0) {
@@ -247,10 +225,9 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
     `<b>Дистанция:</b> ${ride.routeParams.distance} км\n` +
     `<b>Набор высоты:</b> ${ride.routeParams.elevationGain} м\n`;
   
-  // Add ProfileScore with explanation
+  // Add ProfileScore 
   if (profileScore) {
     message += `<b>ProfileScore ${profileScore}</b>\n`;
-    explanations.push(PROFILE_SCORE_EXPLANATION);
   }
   
   message += `<b>Время в седле:</b> ${ride.routeParams.saddleTime}\n` +
@@ -277,11 +254,6 @@ export function formatRideDetails(ride: any, dateKey?: string, months?: string[]
   
   // Food (Где поесть)
   message += foodLine;
-  
-  // Add all explanation texts at the end
-  if (explanations.length > 0) {
-    message += '\n' + explanations.join('\n\n');
-  }
   
   return message;
 }

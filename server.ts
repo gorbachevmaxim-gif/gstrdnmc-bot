@@ -43,6 +43,7 @@ import {
   handleRidesMainCallback,
   handleOpenGpxCallback,
   handleShareGpxCallback,
+  handleExplanationCallback,
   antiSpamMiddleware,
   handleTextMessage
 } from "./src/handlers.js";
@@ -195,6 +196,14 @@ bot.callbackQuery(/^share_gpx:(.+):(\d+)$/, async (ctx) => {
   const dateKey = ctx.match[1];
   const rideIndex = parseInt(ctx.match[2]);
   await handleShareGpxCallback(ctx, dateKey, rideIndex);
+});
+
+// Callback for profile parameter explanations
+bot.callbackQuery(/^explain:(profile|difficulty|distance|speed):(.+):(\d+)$/, async (ctx) => {
+  const type = ctx.match[1];
+  const dateKey = ctx.match[2];
+  const rideIndex = parseInt(ctx.match[3]);
+  await handleExplanationCallback(ctx, type, dateKey, rideIndex);
 });
 
 // ==========================================
