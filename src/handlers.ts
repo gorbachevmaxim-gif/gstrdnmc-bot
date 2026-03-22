@@ -341,7 +341,7 @@ export async function handleShareGpxCallback(ctx: Context, dateKey: string, ride
 // CALLBACK: EXPLANATION (Profile Parameters)
 // ==========================================
 
-// Explanation texts for profile parameters
+// Explanation titles for profile parameters
 const PROFILE_SCORE_EXPLANATION = `Общий набор высоты обманчив: 800 метров могут быть пологими или крутыми «стенками». ProfileScore показывает реальную сложность, оценивая «убойность» горок. Баллы зависят от крутизны и момента: подъем на финише «дороже», чем на старте. Высокий ProfileScore при малом наборе значит, что маршрут коварен и тяжелое в конце. (Формула ProCyclingStats)`;
 
 const DIFFICULTY_EXPLANATION = `С психологической точки зрения важно заранее понимать характер маршрута. Будет ли это монотонная работа или проверка на силу и выносливость, где придется потерпеть? Речь о влиянии рельефа на ощущения от катания. Тяжелый – Profile Score выше 20. Бодрый – от 12 до 20. Легкий – менее 12.`;
@@ -351,19 +351,24 @@ const DISTANCE_RANK_EXPLANATION = `Большой маршрут – диста�
 const SPEED_RANK_EXPLANATION = `Темповой – средняя скорость в движении должна быть выше 33 км/ч. Такая средняя необходима как условие для большого райда от 160 до 200 км. Прогулочный – оптимальная средняя от 30 до 33 км/ч.`;
 
 export async function handleExplanationCallback(ctx: Context, type: string, dateKey: string, rideIndex: number) {
+  let title = '';
   let explanation = '';
   
   switch (type) {
     case 'profile':
+      title = '📊 ProfileScore';
       explanation = PROFILE_SCORE_EXPLANATION;
       break;
     case 'difficulty':
+      title = '🏔 Сложность';
       explanation = DIFFICULTY_EXPLANATION;
       break;
     case 'distance':
+      title = '📏 Дистанция';
       explanation = DISTANCE_RANK_EXPLANATION;
       break;
     case 'speed':
+      title = '⚡ Темп';
       explanation = SPEED_RANK_EXPLANATION;
       break;
     default:
@@ -371,10 +376,15 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
       return;
   }
   
-  await ctx.answerCallbackQuery({
-    text: explanation,
-    show_alert: true
-  });
+  // Send explanation as a regular message (alert has 200 char limit)
+  await ctx.reply(`${title}\n\n${explanation}`);
+  
+  // Acknowledge callback query (without alert)
+  try {
+    await ctx.answerCallbackQuery();
+  } catch (e) {
+    // Query may have expired - ignore
+  }
 }
 
 // ==========================================
