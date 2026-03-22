@@ -373,19 +373,19 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
   
   switch (type) {
     case 'profile':
-      title = '📊 ProfileScore';
+      title = 'ProfileScore';
       explanation = PROFILE_SCORE_EXPLANATION;
       break;
     case 'difficulty':
-      title = '🏔 Сложность';
+      title = 'Сложность';
       explanation = DIFFICULTY_EXPLANATION;
       break;
     case 'distance':
-      title = '📏 Дистанция';
+      title = 'Дистанция';
       explanation = DISTANCE_RANK_EXPLANATION;
       break;
     case 'speed':
-      title = '⚡ Темп';
+      title = 'Темп';
       explanation = SPEED_RANK_EXPLANATION;
       break;
     default:
