@@ -424,7 +424,7 @@ export async function handleCalendar(ctx: Context) {
 
 export async function handleGpxCommand(ctx: Context, url: string | undefined) {
   if (!url) {
-    return ctx.reply("Пожалуйста, укажи ссылку на Komoot. Пример: /gpx https://www.komoot.com/tour/...");
+    return ctx.reply("Обход ограничений Komoot на скачивание GPX. Актуально для платных регионов: Испания, Турция, Беларусь. Сгенерированный gpx-файл будет готов к экспорту в Telegram или сторонние навигаторы. Пожалуйста, укажи ссылку на Komoot. Пример: /gpx https://www.komoot.com/tour/...");
   }
   
   const result = await convertKomootToGpx(url);
