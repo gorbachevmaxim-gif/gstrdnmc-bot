@@ -373,19 +373,19 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
   
   switch (type) {
     case 'profile':
-      title = 'ProfileScore';
+      title = '📊 ProfileScore';
       explanation = PROFILE_SCORE_EXPLANATION;
       break;
     case 'difficulty':
-      title = 'Сложность';
+      title = '⛰️ Сложность';
       explanation = DIFFICULTY_EXPLANATION;
       break;
     case 'distance':
-      title = 'Дистанция';
+      title = '📏 Дистанция';
       explanation = DISTANCE_RANK_EXPLANATION;
       break;
     case 'speed':
-      title = 'Темп';
+      title = '⚡ Темп';
       explanation = SPEED_RANK_EXPLANATION;
       break;
     default:
@@ -403,28 +403,28 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
     return;
   }
   
-  const formattedDate = formatDate(dateKey, MONTHS);
   const baseMessage = formatRideDetails(ride, dateKey, MONTHS) + 
     `\n\n<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_${rideIndex}">Скачать GPX</a>`;
   
-  // Build inline keyboard with explanation buttons and "Закрыть" button
+  // Build inline keyboard with "Закрыть" button to return to ride details
   const buttons: any[] = [];
   
+  // Row 1: Other explanation buttons (if available)
   const profile = ride.analysis?.profile;
   if (profile) {
     const row1: any[] = [];
     const row2: any[] = [];
     
-    if (profile.difficulty) {
+    if (profile.difficulty && type !== 'difficulty') {
       row1.push({ text: "Сложность", callback_data: `explain:difficulty:${dateKey}:${rideIndex}` });
     }
-    if (profile.distanceRank) {
+    if (profile.distanceRank && type !== 'distance') {
       row1.push({ text: "Дистанция", callback_data: `explain:distance:${dateKey}:${rideIndex}` });
     }
-    if (profile.speedRank) {
+    if (profile.speedRank && type !== 'speed') {
       row2.push({ text: "Темп", callback_data: `explain:speed:${dateKey}:${rideIndex}` });
     }
-    if (profile.score) {
+    if (profile.score && type !== 'profile') {
       row2.push({ text: "ProfileScore", callback_data: `explain:profile:${dateKey}:${rideIndex}` });
     }
     
@@ -432,25 +432,25 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
     if (row2.length > 0) buttons.push(row2);
   }
   
-  buttons.push([{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]);
+  // Row 2: Close button to return to ride details
+  buttons.push([{ text: "✖️ Закрыть", callback_data: `ride_detail:${dateKey}:${rideIndex}` }]);
   
-  // Edit message to show explanation inline
+  // The full message with explanation
+  const fullMessage = `${baseMessage}\n\n${title}\n${explanation}`;
+  
+  // Edit message to show explanation inline (same message, not a new one)
   try {
-    await ctx.editMessageText(`${baseMessage}\n\n<b>${title}</b>\n${explanation}`, { 
+    await ctx.editMessageText(fullMessage, { 
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: buttons },
       link_preview_options: { is_disabled: true }
     });
-  } catch (e) {
-    // Fallback: reply with explanation if edit fails
-    await ctx.reply(`${baseMessage}\n\n<b>${title}</b>\n${explanation}`, { 
-      parse_mode: "HTML",
-      reply_markup: { inline_keyboard: buttons },
-      link_preview_options: { is_disabled: true }
-    });
+    await safeAnswerCallbackQuery(ctx);
+  } catch (e: any) {
+    console.error("[EXPLAIN] editMessageText failed:", e?.message);
+    // If edit fails, send as a popup notification instead
+    await safeAnswerCallbackQuery(ctx, explanation.substring(0, 200));
   }
-  
-  await safeAnswerCallbackQuery(ctx);
 }
 
 // ==========================================
