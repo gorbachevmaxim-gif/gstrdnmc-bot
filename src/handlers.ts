@@ -393,10 +393,63 @@ export async function handleExplanationCallback(ctx: Context, type: string, date
       return;
   }
   
-  // Send explanation as a regular message (alert has 200 char limit)
-  await ctx.reply(`${title}\n\n${explanation}`);
+  // Fetch ride data to rebuild the message with explanation
+  const data = await fetchBotData();
+  const dayInfo = data?.groupedByDate?.[dateKey];
+  const ride = dayInfo?.rides?.[rideIndex];
   
-  // Acknowledge callback query (without alert)
+  if (!ride) {
+    await safeAnswerCallbackQuery(ctx, "Маршрут не найден");
+    return;
+  }
+  
+  const formattedDate = formatDate(dateKey, MONTHS);
+  const baseMessage = formatRideDetails(ride, dateKey, MONTHS) + 
+    `\n\n<a href="https://t.me/gstrdnmc_bot?start=share_${dateKey}_${rideIndex}">Скачать GPX</a>`;
+  
+  // Build inline keyboard with explanation buttons and "Закрыть" button
+  const buttons: any[] = [];
+  
+  const profile = ride.analysis?.profile;
+  if (profile) {
+    const row1: any[] = [];
+    const row2: any[] = [];
+    
+    if (profile.difficulty) {
+      row1.push({ text: "Сложность", callback_data: `explain:difficulty:${dateKey}:${rideIndex}` });
+    }
+    if (profile.distanceRank) {
+      row1.push({ text: "Дистанция", callback_data: `explain:distance:${dateKey}:${rideIndex}` });
+    }
+    if (profile.speedRank) {
+      row2.push({ text: "Темп", callback_data: `explain:speed:${dateKey}:${rideIndex}` });
+    }
+    if (profile.score) {
+      row2.push({ text: "ProfileScore", callback_data: `explain:profile:${dateKey}:${rideIndex}` });
+    }
+    
+    if (row1.length > 0) buttons.push(row1);
+    if (row2.length > 0) buttons.push(row2);
+  }
+  
+  buttons.push([{ text: "← Назад", callback_data: `ride_day:${dateKey}` }]);
+  
+  // Edit message to show explanation inline
+  try {
+    await ctx.editMessageText(`${baseMessage}\n\n<b>${title}</b>\n${explanation}`, { 
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: buttons },
+      link_preview_options: { is_disabled: true }
+    });
+  } catch (e) {
+    // Fallback: reply with explanation if edit fails
+    await ctx.reply(`${baseMessage}\n\n<b>${title}</b>\n${explanation}`, { 
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: buttons },
+      link_preview_options: { is_disabled: true }
+    });
+  }
+  
   await safeAnswerCallbackQuery(ctx);
 }
 
